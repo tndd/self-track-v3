@@ -6,6 +6,7 @@ import '../../domain/models.dart';
 import '../../providers/composer_provider.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/track_providers.dart';
+import '../section_chip.dart';
 import '../theme.dart';
 import 'composer_card.dart';
 import 'timeline_entries.dart';
@@ -386,27 +387,11 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // mock/calendar.htmlの.sectionChip（コンテンツを幅いっぱいの灰色タイトル
-    // バーで区切るルール）に合わせた、左寄せ・全幅のピル。寸法はモックの
-    // px（padding 7×13）×1.37。文字は補助テキストより濃くして区切りを強調する。
+    // Calendarのセクションタイトルと共通のSectionChip（全幅の灰色バー）で
+    // 「日の区切り」を表現し、画面間の世界観を統一する。
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE2E8F0),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF334155),
-          ),
-        ),
-      ),
+      child: SectionChip(label: label),
     );
   }
 }

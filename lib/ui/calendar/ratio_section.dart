@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../section_chip.dart';
 import '../theme.dart';
 
 /// mock/calendar.html の「今月の割合」セクション：5段階の日数・割合のドーナツと前月比。
@@ -34,7 +35,7 @@ class RatioSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const _SectionChip(label: '今月の割合'),
+          const SectionChip(label: '今月の割合'),
           const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -159,23 +160,3 @@ class RatioSection extends StatelessWidget {
   }
 }
 
-class _SectionChip extends StatelessWidget {
-  const _SectionChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF2F7),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF667085)),
-      ),
-    );
-  }
-}

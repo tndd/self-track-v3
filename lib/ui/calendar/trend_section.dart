@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../section_chip.dart';
+
 /// mock/calendar.html の「7日間の傾向」セクション：直近7日の日次平均のスパークライン。
 class TrendSection extends StatelessWidget {
   const TrendSection({super.key, required this.days, required this.scores});
@@ -25,17 +27,7 @@ class TrendSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEEF2F7),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: const Text(
-              '7日間の傾向',
-              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFF667085)),
-            ),
-          ),
+          const SectionChip(label: '7日間の傾向'),
           const SizedBox(height: 10),
           Text(
             average?.toStringAsFixed(1) ?? '-',
