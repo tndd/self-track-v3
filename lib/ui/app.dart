@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../providers/navigation_providers.dart';
 import 'calendar/calendar_screen.dart';
 import 'settings/settings_screen.dart';
 import 'stats/stats_screen.dart';
@@ -7,20 +9,7 @@ import 'tags/tags_screen.dart';
 import 'theme.dart';
 import 'track/track_screen.dart';
 
-/// アプリの5つの遷移先。mock/menu.png のドロップダウンメニューに準拠し、
-/// Drawer（横スライド）ではなくハンバーガーアイコン直下に浮かぶカード型メニューで切り替える。
-enum AppDestination {
-  track('Today', Icons.today_outlined),
-  calendar('Calendar', Icons.calendar_month_outlined),
-  stats('Analysis', Icons.insights_outlined),
-  tags('Tags', Icons.sell_outlined),
-  settings('Settings', Icons.settings_outlined);
-
-  const AppDestination(this.label, this.icon);
-
-  final String label;
-  final IconData icon;
-}
+export '../providers/navigation_providers.dart' show AppDestination;
 
 class SelfTrackApp extends StatelessWidget {
   const SelfTrackApp({super.key});
@@ -36,20 +25,19 @@ class SelfTrackApp extends StatelessWidget {
   }
 }
 
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
-  AppDestination _current = AppDestination.track;
+class _AppShellState extends ConsumerState<AppShell> {
   final OverlayPortalController _menuController = OverlayPortalController();
   final LayerLink _menuLink = LayerLink();
 
   void _select(AppDestination destination) {
-    setState(() => _current = destination);
+    ref.read(currentDestinationProvider.notifier).state = destination;
     _menuController.hide();
   }
 
@@ -70,6 +58,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final current = ref.watch(currentDestinationProvider);
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -86,7 +75,7 @@ class _AppShellState extends State<AppShell> {
                       controller: _menuController,
                       overlayChildBuilder: (context) => _MenuOverlay(
                         link: _menuLink,
-                        current: _current,
+                        current: current,
                         onSelect: _select,
                         onDismiss: _menuController.hide,
                       ),
@@ -100,7 +89,7 @@ class _AppShellState extends State<AppShell> {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        _current.label,
+                        current.label,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
@@ -114,7 +103,7 @@ class _AppShellState extends State<AppShell> {
             ),
             Expanded(
               child: IndexedStack(
-                index: AppDestination.values.indexOf(_current),
+                index: AppDestination.values.indexOf(current),
                 children: AppDestination.values.map(_buildScreen).toList(),
               ),
             ),
