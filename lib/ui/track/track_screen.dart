@@ -345,9 +345,15 @@ class TrackDateSubtitle extends ConsumerWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(fontSize: 16, color: Color(0xFF667085)),
+              // 時刻ラベルなどの補助テキスト（#667085）より一段濃く・太くし、
+              // 「いま表示している日」として目立たせる。
+              style: const TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF334155),
+              ),
             ),
-            const Icon(Icons.chevron_right, size: 20, color: Color(0xFF98A2B3)),
+            const Icon(Icons.chevron_right, size: 20, color: Color(0xFF64748B)),
           ],
         ),
       ),
@@ -380,15 +386,24 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 補助テキストと同じ薄灰色だと区切りとして埋もれるため、
+    // チャットアプリ風の淡いピル＋濃い文字で「日の区切り」を強調する。
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 14),
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Center(
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF667085),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF334155),
+            ),
           ),
         ),
       ),
