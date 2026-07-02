@@ -5,17 +5,49 @@ import 'database_providers.dart';
 
 DateTime _startOfDay(DateTime date) => DateTime(date.year, date.month, date.day);
 
-/// Track画面で現在表示中の日付（時刻情報は持たず、日の開始時刻で正規化する）。
-/// design.md §4.2の通り、レコードはtimestampが属する日にそのまま帰属させる
-/// （特例なし）ため、範囲クエリも単純な半開区間で表現できる。
+/// Track画面の「日付ジャンプ先」。DatePickerやCalendarの日セルタップで
+/// セットされ、TrackScreenがタイムラインを該当日までスクロールする。
+/// （時刻情報は持たず、日の開始時刻で正規化する。）
 final selectedDateProvider = StateProvider<DateTime>((ref) => _startOfDay(DateTime.now()));
 
-/// 選択中の日付のタイムライン（新しい順）。
+/// タイムラインが遡って読み込み済みのウィンドウ開始日（この日以降を表示）。
+/// 上方向へのスクロールで14日ずつ過去に広がる。初期値は直近14日。
+final timelineWindowStartProvider = StateProvider<DateTime>(
+  (ref) => _startOfDay(DateTime.now()).subtract(const Duration(days: 13)),
+);
+
+/// ウィンドウ内の全レコード（新しい順）。チャット式の無限スクロールでは
+/// 日単位ではなくウィンドウ開始日以降を丸ごと購読する。
 final timelineProvider = StreamProvider.autoDispose<List<RecordWithTags>>((ref) {
-  final date = ref.watch(selectedDateProvider);
-  final dao = ref.watch(recordsDaoProvider);
-  return dao.watchByDateRange(date, date.add(const Duration(days: 1)));
+  final start = ref.watch(timelineWindowStartProvider);
+  return ref.watch(recordsDaoProvider).watchSince(start);
 });
+
+/// 最古レコードのtimestamp（nullなら記録なし）。遡り終端の判定に使う。
+final oldestRecordTimestampProvider = StreamProvider.autoDispose<DateTime?>(
+  (ref) => ref.watch(recordsDaoProvider).watchOldestTimestamp(),
+);
+
+/// ウィンドウよりさらに過去に記録が残っているか。
+final hasMoreTimelineProvider = Provider.autoDispose<bool>((ref) {
+  final oldest = ref.watch(oldestRecordTimestampProvider).value;
+  if (oldest == null) return false;
+  return oldest.isBefore(ref.watch(timelineWindowStartProvider));
+});
+
+/// スクロール位置の最上部に見えている日。ヘッダの日付サブ行が追従する。
+/// nullは未確定（起動直後など）で、表示側は今日にフォールバックする。
+final visibleTimelineDayProvider = StateProvider<DateTime?>((ref) => null);
+
+/// 日付ジャンプ要求の連番。StateProviderは同値のセットでは通知しないため、
+/// 同じ日を選び直した場合でも再ジャンプできるよう連番の変化で通知する。
+final dateJumpSeqProvider = StateProvider<int>((ref) => 0);
+
+/// DatePicker・Calendarの日セルタップから呼ぶ日付ジャンプの入口。
+void requestDateJump(WidgetRef ref, DateTime day) {
+  ref.read(selectedDateProvider.notifier).state = _startOfDay(day);
+  ref.read(dateJumpSeqProvider.notifier).state++;
+}
 
 /// Composerの「最近使ったタグ」候補。直近レコードのタグを新しい順・重複除去で最大8件。
 final recentTagsProvider = StreamProvider.autoDispose<List<TagRef>>((ref) {
