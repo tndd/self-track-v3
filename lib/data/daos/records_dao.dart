@@ -89,6 +89,25 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
     return query.watch().asyncMap(_attachTags);
   }
 
+  /// [from]以降の全レコードをタグ付きで新しい順に取得するストリーム。
+  /// Trackタイムラインの過去方向無限スクロールで、遡り済みウィンドウの
+  /// 開始日を渡して使う。上限を設けないことで、日付をまたいで作成された
+  /// 新規レコードも即座に反映される。
+  Stream<List<RecordWithTags>> watchSince(DateTime from) {
+    final query = select(records)
+      ..where((r) => r.timestamp.isBiggerOrEqualValue(from))
+      ..orderBy([(r) => OrderingTerm.desc(r.timestamp)]);
+    return query.watch().asyncMap(_attachTags);
+  }
+
+  /// 最古レコードのtimestamp（レコードが無ければnull）。
+  /// 無限スクロールの「これ以上遡れない」判定に使う。
+  Stream<DateTime?> watchOldestTimestamp() {
+    final min = records.timestamp.min();
+    final query = selectOnly(records)..addColumns([min]);
+    return query.watchSingle().map((row) => row.read(min));
+  }
+
   /// 統計計算などで使う、全レコードを時刻昇順で取得するストリーム。
   Stream<List<RecordWithTags>> watchAll() {
     final query = select(records)
