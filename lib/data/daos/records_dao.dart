@@ -133,7 +133,12 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
           .get();
       final tagRefs = tagRows
           .map((r) => r.readTable(tags))
-          .map((t) => TagRef(id: t.id, name: t.name, group: t.group))
+          .map((t) => TagRef(
+                id: t.id,
+                name: t.name,
+                group: t.group,
+                colorIndex: t.colorIndex,
+              ))
           .toList();
       result.add(
         RecordWithTags(

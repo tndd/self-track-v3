@@ -19,10 +19,16 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (m, from, to) async {
+          if (from < 2) {
+            // v2: タグにチップ配色のパレットindex（null=自動）を追加。
+            await m.addColumn(tags, tags.colorIndex);
+          }
+        },
         beforeOpen: (details) async {
           // record_tagsのON DELETE CASCADEを機能させるため、SQLiteの
           // 外部キー制約は接続ごとに明示的に有効化する必要がある。

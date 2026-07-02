@@ -26,6 +26,10 @@ class Tags extends Table {
   TextColumn get group => text().named('tag_group')();
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
 
+  /// チップ配色パレット（ui/tag_colors.dart の kTagChipPalettes）のindex。
+  /// nullの場合はタグ名のハッシュで自動決定する。schema v2で追加。
+  IntColumn get colorIndex => integer().nullable()();
+
   @override
   Set<Column> get primaryKey => {id};
 }

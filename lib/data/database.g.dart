@@ -458,8 +458,25 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _colorIndexMeta = const VerificationMeta(
+    'colorIndex',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, group, isArchived];
+  late final GeneratedColumn<int> colorIndex = GeneratedColumn<int>(
+    'color_index',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    group,
+    isArchived,
+    colorIndex,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -499,6 +516,12 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
         isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
       );
     }
+    if (data.containsKey('color_index')) {
+      context.handle(
+        _colorIndexMeta,
+        colorIndex.isAcceptableOrUnknown(data['color_index']!, _colorIndexMeta),
+      );
+    }
     return context;
   }
 
@@ -524,6 +547,10 @@ class $TagsTable extends Tags with TableInfo<$TagsTable, Tag> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_archived'],
       )!,
+      colorIndex: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color_index'],
+      ),
     );
   }
 
@@ -538,11 +565,16 @@ class Tag extends DataClass implements Insertable<Tag> {
   final String name;
   final String group;
   final bool isArchived;
+
+  /// チップ配色パレット（ui/tag_colors.dart の kTagChipPalettes）のindex。
+  /// nullの場合はタグ名のハッシュで自動決定する。schema v2で追加。
+  final int? colorIndex;
   const Tag({
     required this.id,
     required this.name,
     required this.group,
     required this.isArchived,
+    this.colorIndex,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -551,6 +583,9 @@ class Tag extends DataClass implements Insertable<Tag> {
     map['name'] = Variable<String>(name);
     map['tag_group'] = Variable<String>(group);
     map['is_archived'] = Variable<bool>(isArchived);
+    if (!nullToAbsent || colorIndex != null) {
+      map['color_index'] = Variable<int>(colorIndex);
+    }
     return map;
   }
 
@@ -560,6 +595,9 @@ class Tag extends DataClass implements Insertable<Tag> {
       name: Value(name),
       group: Value(group),
       isArchived: Value(isArchived),
+      colorIndex: colorIndex == null && nullToAbsent
+          ? const Value.absent()
+          : Value(colorIndex),
     );
   }
 
@@ -573,6 +611,7 @@ class Tag extends DataClass implements Insertable<Tag> {
       name: serializer.fromJson<String>(json['name']),
       group: serializer.fromJson<String>(json['group']),
       isArchived: serializer.fromJson<bool>(json['isArchived']),
+      colorIndex: serializer.fromJson<int?>(json['colorIndex']),
     );
   }
   @override
@@ -583,16 +622,23 @@ class Tag extends DataClass implements Insertable<Tag> {
       'name': serializer.toJson<String>(name),
       'group': serializer.toJson<String>(group),
       'isArchived': serializer.toJson<bool>(isArchived),
+      'colorIndex': serializer.toJson<int?>(colorIndex),
     };
   }
 
-  Tag copyWith({String? id, String? name, String? group, bool? isArchived}) =>
-      Tag(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        group: group ?? this.group,
-        isArchived: isArchived ?? this.isArchived,
-      );
+  Tag copyWith({
+    String? id,
+    String? name,
+    String? group,
+    bool? isArchived,
+    Value<int?> colorIndex = const Value.absent(),
+  }) => Tag(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    group: group ?? this.group,
+    isArchived: isArchived ?? this.isArchived,
+    colorIndex: colorIndex.present ? colorIndex.value : this.colorIndex,
+  );
   Tag copyWithCompanion(TagsCompanion data) {
     return Tag(
       id: data.id.present ? data.id.value : this.id,
@@ -601,6 +647,9 @@ class Tag extends DataClass implements Insertable<Tag> {
       isArchived: data.isArchived.present
           ? data.isArchived.value
           : this.isArchived,
+      colorIndex: data.colorIndex.present
+          ? data.colorIndex.value
+          : this.colorIndex,
     );
   }
 
@@ -610,13 +659,14 @@ class Tag extends DataClass implements Insertable<Tag> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('group: $group, ')
-          ..write('isArchived: $isArchived')
+          ..write('isArchived: $isArchived, ')
+          ..write('colorIndex: $colorIndex')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, group, isArchived);
+  int get hashCode => Object.hash(id, name, group, isArchived, colorIndex);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -624,7 +674,8 @@ class Tag extends DataClass implements Insertable<Tag> {
           other.id == this.id &&
           other.name == this.name &&
           other.group == this.group &&
-          other.isArchived == this.isArchived);
+          other.isArchived == this.isArchived &&
+          other.colorIndex == this.colorIndex);
 }
 
 class TagsCompanion extends UpdateCompanion<Tag> {
@@ -632,12 +683,14 @@ class TagsCompanion extends UpdateCompanion<Tag> {
   final Value<String> name;
   final Value<String> group;
   final Value<bool> isArchived;
+  final Value<int?> colorIndex;
   final Value<int> rowid;
   const TagsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.group = const Value.absent(),
     this.isArchived = const Value.absent(),
+    this.colorIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   });
   TagsCompanion.insert({
@@ -645,6 +698,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     required String name,
     required String group,
     this.isArchived = const Value.absent(),
+    this.colorIndex = const Value.absent(),
     this.rowid = const Value.absent(),
   }) : id = Value(id),
        name = Value(name),
@@ -654,6 +708,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     Expression<String>? name,
     Expression<String>? group,
     Expression<bool>? isArchived,
+    Expression<int>? colorIndex,
     Expression<int>? rowid,
   }) {
     return RawValuesInsertable({
@@ -661,6 +716,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
       if (name != null) 'name': name,
       if (group != null) 'tag_group': group,
       if (isArchived != null) 'is_archived': isArchived,
+      if (colorIndex != null) 'color_index': colorIndex,
       if (rowid != null) 'rowid': rowid,
     });
   }
@@ -670,6 +726,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     Value<String>? name,
     Value<String>? group,
     Value<bool>? isArchived,
+    Value<int?>? colorIndex,
     Value<int>? rowid,
   }) {
     return TagsCompanion(
@@ -677,6 +734,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
       name: name ?? this.name,
       group: group ?? this.group,
       isArchived: isArchived ?? this.isArchived,
+      colorIndex: colorIndex ?? this.colorIndex,
       rowid: rowid ?? this.rowid,
     );
   }
@@ -696,6 +754,9 @@ class TagsCompanion extends UpdateCompanion<Tag> {
     if (isArchived.present) {
       map['is_archived'] = Variable<bool>(isArchived.value);
     }
+    if (colorIndex.present) {
+      map['color_index'] = Variable<int>(colorIndex.value);
+    }
     if (rowid.present) {
       map['rowid'] = Variable<int>(rowid.value);
     }
@@ -709,6 +770,7 @@ class TagsCompanion extends UpdateCompanion<Tag> {
           ..write('name: $name, ')
           ..write('group: $group, ')
           ..write('isArchived: $isArchived, ')
+          ..write('colorIndex: $colorIndex, ')
           ..write('rowid: $rowid')
           ..write(')'))
         .toString();
@@ -1335,6 +1397,7 @@ typedef $$TagsTableCreateCompanionBuilder =
       required String name,
       required String group,
       Value<bool> isArchived,
+      Value<int?> colorIndex,
       Value<int> rowid,
     });
 typedef $$TagsTableUpdateCompanionBuilder =
@@ -1343,6 +1406,7 @@ typedef $$TagsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<String> group,
       Value<bool> isArchived,
+      Value<int?> colorIndex,
       Value<int> rowid,
     });
 
@@ -1394,6 +1458,11 @@ class $$TagsTableFilterComposer extends Composer<_$AppDatabase, $TagsTable> {
 
   ColumnFilters<bool> get isArchived => $composableBuilder(
     column: $table.isArchived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colorIndex => $composableBuilder(
+    column: $table.colorIndex,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1450,6 +1519,11 @@ class $$TagsTableOrderingComposer extends Composer<_$AppDatabase, $TagsTable> {
     column: $table.isArchived,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get colorIndex => $composableBuilder(
+    column: $table.colorIndex,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$TagsTableAnnotationComposer
@@ -1472,6 +1546,11 @@ class $$TagsTableAnnotationComposer
 
   GeneratedColumn<bool> get isArchived => $composableBuilder(
     column: $table.isArchived,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get colorIndex => $composableBuilder(
+    column: $table.colorIndex,
     builder: (column) => column,
   );
 
@@ -1533,12 +1612,14 @@ class $$TagsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<String> group = const Value.absent(),
                 Value<bool> isArchived = const Value.absent(),
+                Value<int?> colorIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TagsCompanion(
                 id: id,
                 name: name,
                 group: group,
                 isArchived: isArchived,
+                colorIndex: colorIndex,
                 rowid: rowid,
               ),
           createCompanionCallback:
@@ -1547,12 +1628,14 @@ class $$TagsTableTableManager
                 required String name,
                 required String group,
                 Value<bool> isArchived = const Value.absent(),
+                Value<int?> colorIndex = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
               }) => TagsCompanion.insert(
                 id: id,
                 name: name,
                 group: group,
                 isArchived: isArchived,
+                colorIndex: colorIndex,
                 rowid: rowid,
               ),
           withReferenceMapper: (p0) => p0
