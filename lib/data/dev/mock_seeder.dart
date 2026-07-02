@@ -128,6 +128,11 @@ class MockSeeder {
     final isMorningOnly = _random.nextDouble() < 0.15;
     final times = _buildTimes(day, isMorningOnly);
 
+    // 日単位の調子バイアス。日平均を±1側に寄せ、Calendarのドットが
+    // 5段階（赤〜青）で色分けされる日を作る。
+    final moodRoll = _random.nextDouble();
+    final dayMood = moodRoll < 0.20 ? -1 : (moodRoll < 0.70 ? 0 : 1);
+
     // 日単位の共起フラグ。コーヒー・低気圧は頭痛を増やし、
     // ウォーキングは倦怠感を減らす方向に設計する。
     final coffeeDay = _random.nextDouble() < 0.35;
@@ -140,7 +145,7 @@ class MockSeeder {
     final fatigueDay = _random.nextDouble() < (walkingDay ? 0.05 : 0.15);
 
     final dayTags = List.generate(times.length, (_) => <String>{});
-    final dayValues = List.generate(times.length, (_) => _drawValue());
+    final dayValues = List.generate(times.length, (_) => _drawValue(dayMood));
 
     if (headacheDay) {
       // 先頭レコードを頭痛＋不調にし、70%で2〜4時間後に服薬＋回復を置く。
@@ -232,9 +237,9 @@ class MockSeeder {
 
   /// その日のレコード時刻を昇順で生成する。午前のみの日は6:00〜9:00に
   /// 3件（翌日まで12時間超が空きCalendarの減衰補間が発動する）、
-  /// 通常日は6:30〜22:30に4〜7件。
+  /// 通常日は6:30〜22:30に4〜8件。
   List<DateTime> _buildTimes(DateTime day, bool isMorningOnly) {
-    final count = isMorningOnly ? 3 : 4 + _random.nextInt(4);
+    final count = isMorningOnly ? 3 : 4 + _random.nextInt(5);
     final (minMinute, maxMinute) = isMorningOnly ? (360, 540) : (390, 1350);
     final minutes = <int>{};
     while (minutes.length < count) {
@@ -254,13 +259,19 @@ class MockSeeder {
     return null;
   }
 
-  /// 体調値（DB値 -2〜2）を現実的な分布で抽選する。0が最頻。
-  int _drawValue() {
+  /// 体調値（DB値 -2〜2）を現実的な分布で抽選する。0が最頻で、
+  /// [mood]（その日の調子バイアス）の分だけ全体を上下にずらす。
+  int _drawValue(int mood) {
     final r = _random.nextDouble();
-    if (r < 0.45) return 0;
-    if (r < 0.65) return 1;
-    if (r < 0.85) return -1;
-    if (r < 0.92) return 2;
-    return -2;
+    final base = r < 0.45
+        ? 0
+        : r < 0.65
+            ? 1
+            : r < 0.85
+                ? -1
+                : r < 0.92
+                    ? 2
+                    : -2;
+    return (base + mood).clamp(-2, 2);
   }
 }
