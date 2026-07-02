@@ -23,7 +23,7 @@ void main() {
     );
 
     expect(find.text('Today'), findsOneWidget);
-    expect(find.text('Track（M3で実装）'), findsOneWidget);
+    expect(find.text('コメントを書く...'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.menu));
     await tester.pumpAndSettle();
