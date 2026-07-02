@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Calendar Mockup v14 - Swap Avg/Day + Dense Multi-color Ring</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#e9edf5;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111827}
+header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.92);backdrop-filter:blur(12px);border-bottom:1px solid #dfe5ef;padding:18px 24px}
+h1{font-size:20px;margin:0 0 6px}
+p.lead{margin:0;color:#667085;font-size:13px;line-height:1.55}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:30px;padding:28px;align-items:start}
+.case h2{font-size:14px;margin:0 0 10px;color:#344054;display:flex;gap:8px;align-items:center}
+.case h2 span{background:#111827;color:#fff;border-radius:999px;font-size:11px;padding:3px 8px}
+.case p.note{font-size:11.5px;color:#667085;margin:0 0 12px;line-height:1.5;max-width:300px;margin-left:auto;margin-right:auto}
+.phone{width:300px;height:640px;margin:auto;border:8px solid #111827;border-radius:36px;background:#fff;overflow:hidden;box-shadow:0 18px 45px rgba(16,24,40,.18);position:relative}
+.screen{height:100%;position:relative;overflow:hidden;background:#f7f8fb;display:flex;flex-direction:column}
+
+.appHeader{flex:0 0 auto}
+.pad{padding:16px 18px 0}
+.top{position:relative;z-index:6;display:flex;align-items:flex-start;gap:10px}
+.titleBlock{flex:1}
+.title{font-size:22px;font-weight:850;letter-spacing:-.035em;line-height:1.05}
+.iconBtn{width:32px;height:32px;border:0;border-radius:10px;background:transparent;color:#475569;display:grid;place-items:center;font-size:21px;flex:0 0 auto}
+
+.scrollArea{flex:1 1 auto;overflow-y:auto;display:flex;flex-direction:column;min-height:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.scrollArea::-webkit-scrollbar{display:none}
+
+.monthNavRow{display:flex;align-items:center;justify-content:center;gap:14px;margin:15px 0 10px;flex:0 0 auto}
+.monthNavRow b{font-weight:850;color:#111827;font-size:13px;letter-spacing:.01em;min-width:84px;text-align:center}
+.navArrow{width:26px;height:26px;border:0;background:#eef1f6;border-radius:50%;color:#475569;font-size:12px;display:grid;place-items:center;flex:0 0 auto}
+
+.calendarZone{flex:0 0 70%;display:flex;flex-direction:column;min-height:0;position:relative}
+.calendarZone:after{content:"";position:absolute;left:16px;right:16px;bottom:0;height:1px;background:#eef1f6}
+
+.calArea{flex:1 1 auto;padding:0 16px 10px;display:flex;flex-direction:column;min-height:0}
+.weekHead{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:10px;color:#98a2b3;font-weight:700;flex:0 0 auto;padding-bottom:8px}
+.weekHead span:first-child{color:#ef4444}
+.weekHead span:last-child{color:#3b82f6}
+
+.calGrid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:1fr;flex:1;min-height:0}
+.calGrid .cell{border-bottom:1px solid rgba(17,24,39,.07)}
+.calGrid .cell.lastRow{border-bottom:0}
+.cell{display:flex;align-items:center;justify-content:center;position:relative;min-width:0}
+
+/* 案1: そのまま */
+.dot{border-radius:50%;display:grid;place-items:center;font-weight:750;color:#fff;position:relative;width:32px;height:32px;font-size:11.5px}
+.dot.s1{background:#ef4444}.dot.s2{background:#f97316}.dot.s3{background:#94a3b8;color:#111827}.dot.s4{background:#22c55e}.dot.s5{background:#3b82f6}
+.dot.empty{background:transparent}
+
+/* 案2: 平均値を主役に・日付を脇役に */
+.cell.withAvg{flex-direction:column;gap:2px}
+.dotSmall{border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;position:relative;width:30px;height:30px;font-size:10px;letter-spacing:-.02em}
+.dotSmall.s1{background:#ef4444}.dotSmall.s2{background:#f97316}.dotSmall.s3{background:#94a3b8;color:#111827}.dotSmall.s4{background:#22c55e}.dotSmall.s5{background:#3b82f6}
+.dotSmall.empty{background:transparent}
+.avgNum{font-size:9.5px;color:#94a3b8;font-weight:700;line-height:1}
+.cell.withAvg.emptyCell .avgNum{visibility:hidden}
+
+/* 案3: リング(今月の割合と同じ語彙を日次に展開) */
+.dot.ring{width:32px;height:32px;border-radius:50%;position:relative}
+.dot.ring .ringBg{position:absolute;inset:0;border-radius:50%}
+.dot.ring .ringHole{position:absolute;inset:5px;border-radius:50%;background:#f7f8fb}
+.dot.ring .dayNumSpan{position:relative;z-index:2;font-size:11px;font-weight:750;color:#111827;display:block;width:100%;height:100%;display:grid;place-items:center}
+.dot.ring.empty .ringBg{background:transparent}
+.dot.ring.empty .ringHole{background:transparent}
+
+.bottomFlat{flex:0 0 auto;display:flex;flex-direction:column;padding:14px 16px 20px;gap:16px}
+.sectionBlock{display:flex;flex-direction:column;min-height:0}
+.sectionChip{display:flex;align-items:center;width:100%;background:#eef2f7;color:#667085;font-size:10.5px;font-weight:800;letter-spacing:.02em;border-radius:999px;padding:7px 13px;flex:0 0 auto}
+
+.ratioContentH{display:flex;align-items:flex-start;gap:10px;padding-top:10px}
+.ratioDonut{flex:0 0 auto;width:90px;height:90px}
+
+.legendColA{display:flex;flex-direction:column;justify-content:space-between;height:90px;flex:0 0 auto;width:60px}
+.legRowA{display:flex;align-items:center;gap:4px}
+.legDot{width:6px;height:6px;border-radius:50%;flex:0 0 auto}
+.legRowA b{font-size:10px;font-weight:800;color:#111827;white-space:nowrap}
+.legRowA .pct{font-size:8.5px;color:#9aa2b0;font-weight:650;margin-left:0;white-space:nowrap}
+
+.momSlot{flex:1;height:90px;display:flex;flex-direction:column;justify-content:center;align-items:center;min-width:0;text-align:center}
+.momLabel{font-size:9px;color:#98a2b3;font-weight:750;margin-bottom:6px}
+.momBadge{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:999px;font-size:15px;font-weight:850;width:fit-content}
+.momBadge.up{background:#e7f8ee;color:#16a34a}
+.momBadge.down{background:#fdecec;color:#dc2626}
+.momBadgeSub{font-size:8.5px;color:#aab2c0;margin-top:6px}
+
+.trendContent{display:flex;flex-direction:column;gap:6px;padding-top:10px}
+.trendNumRow{display:flex;align-items:baseline;gap:8px}
+.trendNumRow b{font-size:20px;font-weight:850;letter-spacing:-.02em;color:#475569}
+.trendTag{font-size:10px;font-weight:750;border-radius:999px;padding:2px 7px}
+.trendTag.down{background:#ffe4e6;color:#be123c}
+.sparkWrap{height:72px}
+.dayLabels{display:flex;justify-content:space-between;font-size:9px;color:#b0b7c3;padding:0 1px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Calendar Mockup v14 — Swap Avg/Day + Dense Multi-color Ring</h1>
+  <p class="lead">案2は平均値と日付の主従を入れ替え、円の中に平均値を大きく、日付は下に小さく添える形に変更。案3は複数記録日を全体の大半に増やし、実際に多色だらけになった時の印象を評価できるようにした（単色は5日・12日・20日・28日のみ残して対比させている）。</p>
+</header>
+<main class="grid">
+
+<section class="case"><h2><span>1</span> そのまま</h2>
+  <p class="note">現状のシンプルな円のみ。日付の数字と体調カラーだけで構成する、最も情報密度の低い基準形。</p>
+  <div class="phone"><div class="screen">
+    <div class="appHeader"><div class="pad"><div class="top"><button class="iconBtn">☰</button><div class="titleBlock"><div class="title">Calendar</div></div></div></div></div>
+    <div class="scrollArea">
+      <div class="calendarZone">
+        <div class="monthNavRow"><button class="navArrow">‹</button><b>2026年6月</b><button class="navArrow">›</button></div>
+        <div class="calArea">
+          <div class="weekHead"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+          <div class="calGrid" id="g1"></div>
+        </div>
+      </div>
+      <div class="bottomFlat" id="bottom1"></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="case"><h2><span>2</span> 平均値を主役に・日付を脇役に</h2>
+  <p class="note">円の中に平均値を大きく表示し、日付はその下に小さく添える形に反転。カレンダーの行・列の位置自体が「だいたい何日か」を語ってくれる前提に立ち、円の中身は体調の精密値を優先する。</p>
+  <div class="phone"><div class="screen">
+    <div class="appHeader"><div class="pad"><div class="top"><button class="iconBtn">☰</button><div class="titleBlock"><div class="title">Calendar</div></div></div></div></div>
+    <div class="scrollArea">
+      <div class="calendarZone">
+        <div class="monthNavRow"><button class="navArrow">‹</button><b>2026年6月</b><button class="navArrow">›</button></div>
+        <div class="calArea">
+          <div class="weekHead"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+          <div class="calGrid" id="g2"></div>
+        </div>
+      </div>
+      <div class="bottomFlat" id="bottom2"></div>
+    </div>
+  </div></div>
+</section>
+
+<section class="case"><h2><span>3</span> 多色密度を上げたリング</h2>
+  <p class="note">1日に複数回記録するのが前提という条件のもと、ほとんどの日を2〜3件の記録を持つ多色リングにした。単色は5日・12日・20日・28日の4日だけ残して対比させている。カレンダー全体が「多色だらけ」になった時の印象を評価する用。</p>
+  <div class="phone"><div class="screen">
+    <div class="appHeader"><div class="pad"><div class="top"><button class="iconBtn">☰</button><div class="titleBlock"><div class="title">Calendar</div></div></div></div></div>
+    <div class="scrollArea">
+      <div class="calendarZone">
+        <div class="monthNavRow"><button class="navArrow">‹</button><b>2026年6月</b><button class="navArrow">›</button></div>
+        <div class="calArea">
+          <div class="weekHead"><span>日</span><span>月</span><span>火</span><span>水</span><span>木</span><span>金</span><span>土</span></div>
+          <div class="calGrid" id="g3"></div>
+        </div>
+      </div>
+      <div class="bottomFlat" id="bottom3"></div>
+    </div>
+  </div></div>
+</section>
+
+</main>
+
+<script>
+const data = [
+  null,1,2,3,1,3,4, 5,4,1,2,3,2,4, 1,5,3,2,1,4,3, 2,1,3,4,5,2,1, 3,4,2
+];
+const avgBase = {1:1.4, 2:2.3, 3:3.1, 4:3.9, 5:4.6};
+const colorMap = {1:"#ef4444",2:"#f97316",3:"#94a3b8",4:"#22c55e",5:"#3b82f6"};
+
+// 案3用: 1日に複数回記録がある前提で、ほぼ全日を多色化。単色は数日だけ残して対比。
+const multiEntries = {
+  1:[1,3], 2:[2,2], 3:[5,1], 4:[4,1], 6:[2,2], 7:[5,1], 8:[2,5],
+  9:[2,4,5], 10:[1,2,4], 11:[3,2,2], 13:[1,4], 14:[3,3], 15:[3,1],
+  16:[5,1,4], 17:[5,3], 18:[3,5], 19:[1,1], 21:[1,2,1], 22:[3,4,3],
+  23:[3,3], 24:[3,1], 25:[2,5], 26:[2,4], 27:[3,5,2], 29:[2,1], 30:[4,3,1]
+};
+
+function lastRowStartIndex(){
+  return Math.floor((data.length-1)/7)*7;
+}
+
+function buildGridPlain(id){
+  const el = document.getElementById(id);
+  const lastRowStart = lastRowStartIndex();
+  let day = 1;
+  data.forEach((score, idx)=>{
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    if(idx >= lastRowStart) cell.classList.add('lastRow');
+    if(score===null){
+      cell.innerHTML = '<div class="dot empty"></div>';
+    } else {
+      cell.innerHTML = `<div class="dot s${score}">${day}</div>`;
+      day++;
+    }
+    el.appendChild(cell);
+  });
+}
+
+function buildGridAvg(id){
+  const el = document.getElementById(id);
+  const lastRowStart = lastRowStartIndex();
+  let day = 1;
+  data.forEach((score, idx)=>{
+    const cell = document.createElement('div');
+    cell.className = 'cell withAvg';
+    if(idx >= lastRowStart) cell.classList.add('lastRow');
+    if(score===null){
+      cell.classList.add('emptyCell');
+      cell.innerHTML = '<div class="dotSmall empty"></div><div class="avgNum">&nbsp;</div>';
+    } else {
+      const variance = [-0.15,0,0.15][day % 3];
+      const avg = (avgBase[score] + variance).toFixed(1);
+      cell.innerHTML = `<div class="dotSmall s${score}">${avg}</div><div class="avgNum">${day}</div>`;
+      day++;
+    }
+    el.appendChild(cell);
+  });
+}
+
+function buildGridRing(id){
+  const el = document.getElementById(id);
+  const lastRowStart = lastRowStartIndex();
+  let day = 1;
+  data.forEach((score, idx)=>{
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    if(idx >= lastRowStart) cell.classList.add('lastRow');
+    if(score===null){
+      cell.innerHTML = '<div class="dot ring empty"><div class="ringBg"></div><div class="ringHole"></div></div>';
+    } else {
+      const thisDay = day;
+      let bg;
+      if(multiEntries[thisDay]){
+        const entries = multiEntries[thisDay];
+        const step = 100/entries.length;
+        const stops = entries.map((s,i)=>`${colorMap[s]} ${(i*step).toFixed(1)}% ${((i+1)*step).toFixed(1)}%`).join(', ');
+        bg = `conic-gradient(from -90deg, ${stops})`;
+      } else {
+        bg = colorMap[score];
+      }
+      cell.innerHTML = `<div class="dot ring"><div class="ringBg" style="background:${bg}"></div><div class="ringHole"></div><span class="dayNumSpan">${thisDay}</span></div>`;
+      day++;
+    }
+    el.appendChild(cell);
+  });
+}
+
+buildGridPlain('g1');
+buildGridAvg('g2');
+buildGridRing('g3');
+
+// 共通の下部ブロック(今月の割合バッジ確定版 + 7日間の傾向・基準線ピボット塗り)をテンプレートとして3画面に複製
+const bottomTemplate = `
+  <div class="sectionBlock">
+    <span class="sectionChip">今月の割合</span>
+    <div class="ratioContentH">
+      <svg class="ratioDonut" width="90" height="90" viewBox="0 0 100 100">
+        <g stroke-width="14" fill="none" stroke-linecap="butt">
+          <path d="M12.0,50.0 A38,38 0 0 1 24.6,21.8" stroke="#ef4444"/>
+          <path d="M24.6,21.8 A38,38 0 0 1 69.0,17.1" stroke="#f97316"/>
+          <path d="M69.0,17.1 A38,38 0 0 1 75.4,78.2" stroke="#94a3b8"/>
+          <path d="M75.4,78.2 A38,38 0 0 1 24.6,78.2" stroke="#22c55e"/>
+          <path d="M24.6,78.2 A38,38 0 0 1 12.0,50.0" stroke="#3b82f6"/>
+        </g>
+        <text x="50" y="45.25" text-anchor="middle" dominant-baseline="central" font-size="19" font-weight="850" fill="#475569">3.1</text>
+        <text x="50" y="60.25" text-anchor="middle" dominant-baseline="central" font-size="9" fill="#aab2c0">今月平均</text>
+      </svg>
+      <div class="legendColA">
+        <div class="legRowA"><span class="legDot" style="background:#ef4444"></span><b>4日</b><span class="pct">13%</span></div>
+        <div class="legRowA"><span class="legDot" style="background:#f97316"></span><b>6日</b><span class="pct">20%</span></div>
+        <div class="legRowA"><span class="legDot" style="background:#94a3b8"></span><b>9日</b><span class="pct">30%</span></div>
+        <div class="legRowA"><span class="legDot" style="background:#22c55e"></span><b>7日</b><span class="pct">23%</span></div>
+        <div class="legRowA"><span class="legDot" style="background:#3b82f6"></span><b>4日</b><span class="pct">13%</span></div>
+      </div>
+      <div class="momSlot">
+        <span class="momLabel">前月比</span>
+        <div class="momBadge up">↗ +11%</div>
+        <span class="momBadgeSub">先月 2.8</span>
+      </div>
+    </div>
+  </div>
+  <div class="sectionBlock">
+    <span class="sectionChip">7日間の傾向</span>
+    <div class="trendContent">
+      <div class="trendNumRow"><b>2.8</b><span class="trendTag down">↓ 0.6</span></div>
+      <svg class="sparkWrap" width="100%" height="72" viewBox="0 0 268 100" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="pivotGradLineX" x1="0" y1="92" x2="0" y2="8" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#ef4444"/>
+            <stop offset="30%" stop-color="#f97316"/>
+            <stop offset="50%" stop-color="#f97316"/>
+            <stop offset="50%" stop-color="#22c55e"/>
+            <stop offset="70%" stop-color="#22c55e"/>
+            <stop offset="100%" stop-color="#3b82f6"/>
+          </linearGradient>
+          <linearGradient id="pivotGradFillX" x1="0" y1="92" x2="0" y2="8" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.32"/>
+            <stop offset="30%" stop-color="#f97316" stop-opacity="0.26"/>
+            <stop offset="50%" stop-color="#f97316" stop-opacity="0.18"/>
+            <stop offset="50%" stop-color="#22c55e" stop-opacity="0.18"/>
+            <stop offset="70%" stop-color="#22c55e" stop-opacity="0.26"/>
+            <stop offset="100%" stop-color="#3b82f6" stop-opacity="0.32"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="50" x2="268" y2="50" stroke="#9aa2b0" stroke-width="1.2" stroke-dasharray="3,3"/>
+        <text x="2" y="46" font-size="7" fill="#9aa2b0">普通</text>
+        <path d="M0.0,38.0 C7.4,42.0 29.8,64.5 44.7,62.0 C59.6,59.5 74.4,31.0 89.3,23.0 C104.2,15.0 119.1,9.0 134.0,14.0 C148.9,19.0 163.8,43.5 178.7,53.0 C193.6,62.5 208.4,70.5 223.3,71.0 C238.2,71.5 260.6,58.5 268.0,56.0 L268.0,50 L0.0,50 Z" fill="url(#pivotGradFillX)"/>
+        <path d="M0.0,38.0 C7.4,42.0 29.8,64.5 44.7,62.0 C59.6,59.5 74.4,31.0 89.3,23.0 C104.2,15.0 119.1,9.0 134.0,14.0 C148.9,19.0 163.8,43.5 178.7,53.0 C193.6,62.5 208.4,70.5 223.3,71.0 C238.2,71.5 260.6,58.5 268.0,56.0" fill="none" stroke="url(#pivotGradLineX)" stroke-width="2.6" stroke-linecap="round"/>
+        <circle cx="0.0" cy="38.0" r="3" fill="#22c55e"/>
+        <circle cx="44.7" cy="62.0" r="3" fill="#f97316"/>
+        <circle cx="89.3" cy="23.0" r="3" fill="#22c55e"/>
+        <circle cx="134.0" cy="14.0" r="3" fill="#3b82f6"/>
+        <circle cx="178.7" cy="53.0" r="3" fill="#f97316"/>
+        <circle cx="223.3" cy="71.0" r="3" fill="#ef4444"/>
+        <circle cx="268.0" cy="56.0" r="3.4" fill="#f97316"/>
+      </svg>
+      <div class="dayLabels"><span>6/23</span><span>6/24</span><span>6/25</span><span>6/26</span><span>6/27</span><span>6/28</span><span>6/29</span></div>
+    </div>
+  </div>
+`;
+['bottom1','bottom2','bottom3'].forEach((id,i)=>{
+  // SVGグラデーションIDが複数画面で重複しないよう、画面ごとに置換する
+  document.getElementById(id).innerHTML = bottomTemplate.replaceAll('pivotGradLineX', 'pivotGradLine'+i).replaceAll('pivotGradFillX', 'pivotGradFill'+i);
+});
+</script>
+</body>
+</html>
