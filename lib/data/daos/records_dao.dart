@@ -96,6 +96,14 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
     return query.watch().asyncMap(_attachTags);
   }
 
+  /// Composerの「最近使ったタグ」算出に使う、直近レコードを新しい順で取得するストリーム。
+  Stream<List<RecordWithTags>> watchRecent({int limit = 30}) {
+    final query = select(records)
+      ..orderBy([(r) => OrderingTerm.desc(r.timestamp)])
+      ..limit(limit);
+    return query.watch().asyncMap(_attachTags);
+  }
+
   Future<List<RecordWithTags>> _attachTags(List<RecordEntry> rows) async {
     final result = <RecordWithTags>[];
     for (final row in rows) {
