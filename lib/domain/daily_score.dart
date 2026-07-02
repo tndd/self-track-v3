@@ -25,37 +25,14 @@ double? computeDailyAverage({
 
   final series = buildConditionSeries(allRecordsAscending, now: now);
 
-  double valueAt(DateTime t) {
-    ConditionPoint? before;
-    ConditionPoint? after;
-    for (final p in series) {
-      if (!p.timestamp.isAfter(t)) {
-        before = p;
-      } else {
-        after = p;
-        break;
-      }
-    }
-    // 最初の記録より前: 何も分かっていないため既定値0（design.md §2.2）とする。
-    if (before == null) return 0;
-    // 最後の記録（または減衰後の点）より後: その値がそのまま続くとみなす。
-    if (after == null) return before.value;
-    if (!after.timestamp.isAfter(before.timestamp)) return before.value;
-
-    final spanMicros = after.timestamp.difference(before.timestamp).inMicroseconds;
-    final elapsedMicros = t.difference(before.timestamp).inMicroseconds;
-    final fraction = elapsedMicros / spanMicros;
-    return before.value + (after.value - before.value) * fraction;
-  }
-
   final interior = series.where(
     (p) => p.timestamp.isAfter(dayStart) && p.timestamp.isBefore(dayEnd),
   );
 
   final points = <ConditionPoint>[
-    ConditionPoint(timestamp: dayStart, value: valueAt(dayStart)),
+    ConditionPoint(timestamp: dayStart, value: valueAtTime(series, dayStart)),
     ...interior,
-    ConditionPoint(timestamp: dayEnd, value: valueAt(dayEnd)),
+    ConditionPoint(timestamp: dayEnd, value: valueAtTime(series, dayEnd)),
   ];
 
   var area = 0.0;
