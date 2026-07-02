@@ -151,13 +151,14 @@ class _MenuOverlay extends StatelessWidget {
           link: link,
           targetAnchor: Alignment.bottomLeft,
           followerAnchor: Alignment.topLeft,
-          offset: const Offset(0, 8),
+          offset: const Offset(0, 10),
           child: Material(
             elevation: 8,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(24),
             color: Colors.white,
             child: SizedBox(
-              width: 260,
+              // 画面横幅の7割に広げる（mock/menu.pngのカード型メニューを拡大）。
+              width: MediaQuery.sizeOf(context).width * 0.7,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -193,32 +194,32 @@ class _MenuItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
         decoration: const BoxDecoration(
           border: Border(bottom: BorderSide(color: Color(0xFFF1F3F7))),
         ),
         child: Row(
           children: [
             Container(
-              width: 34,
-              height: 34,
+              width: 46,
+              height: 46,
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F3F7),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(13),
               ),
-              child: Icon(destination.icon, size: 18, color: const Color(0xFF475569)),
+              child: Icon(destination.icon, size: 24, color: const Color(0xFF475569)),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 16),
             Expanded(
               child: Text(
                 destination.label,
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: 19,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
             ),
-            if (selected) const Icon(Icons.check, size: 18),
+            if (selected) const Icon(Icons.check, size: 24),
           ],
         ),
       ),
