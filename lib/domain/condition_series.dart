@@ -59,3 +59,29 @@ List<ConditionPoint> buildConditionSeries(
 
   return points;
 }
+
+/// [series]（timestamp昇順であること）を使い、任意時刻[t]の体調値を線形補間で求める。
+/// daily_score.dart・stats/event_locked.dartの双方が使う共通ロジック。
+///
+/// - 系列の最初の点より前の時刻: データが無いため既定値0とする（design.md §2.2）。
+/// - 系列の最後の点より後の時刻: 最後の値がそのまま続くとみなす。
+double valueAtTime(List<ConditionPoint> series, DateTime t) {
+  ConditionPoint? before;
+  ConditionPoint? after;
+  for (final p in series) {
+    if (!p.timestamp.isAfter(t)) {
+      before = p;
+    } else {
+      after = p;
+      break;
+    }
+  }
+
+  if (before == null) return 0;
+  if (after == null) return before.value;
+  if (!after.timestamp.isAfter(before.timestamp)) return before.value;
+
+  final spanMicros = after.timestamp.difference(before.timestamp).inMicroseconds;
+  final elapsedMicros = t.difference(before.timestamp).inMicroseconds;
+  return before.value + (after.value - before.value) * (elapsedMicros / spanMicros);
+}
