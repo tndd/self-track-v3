@@ -28,6 +28,16 @@ class AppDatabase extends _$AppDatabase {
           await customStatement('PRAGMA foreign_keys = ON');
         },
       );
+
+  /// Settings画面の「データの全削除」から呼び出す。recordsを削除すれば
+  /// record_tagsはON DELETE CASCADEで自動的に空になるため、tagsも
+  /// あわせて削除すれば全データが消える。
+  Future<void> deleteAllData() {
+    return transaction(() async {
+      await delete(records).go();
+      await delete(tags).go();
+    });
+  }
 }
 
 QueryExecutor _openConnection() {

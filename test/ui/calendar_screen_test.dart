@@ -48,6 +48,9 @@ void main() {
     expect(find.text('7日間の傾向'), findsOneWidget);
     // 記録の無い日は空白（今月平均の"-"とは別に、日次データ無しを示す）。
     expect(find.text('データ無し'), findsNothing);
+    // 記録がある日（10日・11日）だけが色付きドット(CircleAvatar)で表示され、
+    // それ以外の日は数字のみの空白セルになる。
+    expect(find.byType(CircleAvatar), findsNWidgets(2));
 
     // 前の月に移動すると見出しが変わる
     await tester.tap(find.byIcon(Icons.chevron_left));
