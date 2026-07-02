@@ -65,7 +65,7 @@ class _AppShellState extends ConsumerState<AppShell> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -81,6 +81,7 @@ class _AppShellState extends ConsumerState<AppShell> {
                       ),
                       child: IconButton(
                         icon: const Icon(Icons.menu),
+                        iconSize: 30,
                         onPressed: _menuController.toggle,
                       ),
                     ),
@@ -88,13 +89,22 @@ class _AppShellState extends ConsumerState<AppShell> {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Text(
-                        current.label,
-                        style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.5,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            current.label,
+                            style: const TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1.0,
+                            ),
+                          ),
+                          // Trackのみ、mock同様タイトル直下にスクロール位置へ
+                          // 追従する日付サブ行を表示する。
+                          if (current == AppDestination.track)
+                            const TrackDateSubtitle(),
+                        ],
                       ),
                     ),
                   ),
