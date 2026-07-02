@@ -35,7 +35,7 @@ void main() {
     await tester.tap(find.text('Calendar').last);
     await tester.pumpAndSettle();
 
-    expect(find.text('Calendar（M5で実装）'), findsOneWidget);
+    expect(find.text('今月の割合'), findsOneWidget);
 
     // Driftの監視ストリームのdispose時ゼロ秒タイマーを処理させてから終了する。
     await tester.pumpWidget(const SizedBox());
