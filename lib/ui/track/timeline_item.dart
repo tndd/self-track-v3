@@ -15,7 +15,11 @@ class TimelineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final level = ConditionLevel.fromDbValue(record.value);
-    final timeLabel = TimeOfDay.fromDateTime(record.timestamp).format(context);
+    // mock準拠の24時間表記（14:20）。ロケール依存の12時間表記だと
+    // 「11:08 AM」のように時刻カラム幅を超えて折り返してしまう。
+    final time = record.timestamp;
+    final timeLabel = '${time.hour.toString().padLeft(2, '0')}:'
+        '${time.minute.toString().padLeft(2, '0')}';
 
     return InkWell(
       onLongPress: onLongPress,
