@@ -277,6 +277,11 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
             TimelineRecordEntry(:final record) => TimelineItem(
                 key: ValueKey(record.id),
                 record: record,
+                // reverse:trueではindex-1が視覚的にすぐ下のエントリ。
+                // 同じ日のレコード同士は配列上で連続する（日付ヘッダが日を
+                // 区切る）ため、下がレコードなら同日＝レールを接続する。
+                connectBottom:
+                    index > 0 && entries[index - 1] is TimelineRecordEntry,
                 onLongPress: () => _showLongPressMenu(record),
               ),
             TimelineDateHeaderEntry(:final label, :final day) =>

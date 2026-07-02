@@ -7,10 +7,20 @@ import '../theme.dart';
 /// タイムラインの1レコード。寸法はmock/track.html（幅300pxフレーム）の
 /// px値 × 1.37 を dp に丸めた値（例: 時刻11→15、スコア円28→38、チップ11→15）。
 class TimelineItem extends StatelessWidget {
-  const TimelineItem({super.key, required this.record, required this.onLongPress});
+  const TimelineItem({
+    super.key,
+    required this.record,
+    required this.onLongPress,
+    this.connectBottom = false,
+  });
 
   final RecordWithTags record;
   final VoidCallback onLongPress;
+
+  /// trueなら下のアイテムも同じ日のレコードで、レール（左ボーダー）を
+  /// アイテム間の余白まで延長して接続する。1日分の記録がひとつの
+  /// 塊として見えるようにするための指定で、日の末尾では途切れさせる。
+  final bool connectBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +34,8 @@ class TimelineItem extends StatelessWidget {
     return InkWell(
       onLongPress: onLongPress,
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 19),
+        // 接続時は余白をレール付きコンテナの内側（下記padding）に移す。
+        padding: EdgeInsets.only(bottom: connectBottom ? 0 : 19),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -45,7 +56,10 @@ class TimelineItem extends StatelessWidget {
                 children: [
                   Container(
                     constraints: const BoxConstraints(minHeight: 58),
-                    padding: const EdgeInsets.only(left: 16),
+                    padding: EdgeInsets.only(
+                      left: 16,
+                      bottom: connectBottom ? 19 : 0,
+                    ),
                     decoration: const BoxDecoration(
                       border: Border(
                         left: BorderSide(color: Color(0xFFDFE4EE), width: 3),
