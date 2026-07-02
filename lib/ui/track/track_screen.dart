@@ -326,8 +326,10 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
   }
 }
 
-/// ヘッダ（AppShell）のタイトル直下に表示する日付サブ行。
-/// スクロールで最上部に見えている日を常に表示し、タップでDatePickerを開く。
+/// ヘッダ（AppShell）直下に表示する日付バー。スクロールで最上部に見えて
+/// いる日を常に表示し、タップでDatePickerを開く。タイムライン内の日付
+/// 区切りと同じSectionChip・同じ左右位置（24dp）にすることで、スクロールで
+/// リスト内のバーと重なった際に表示がピタリと一致する。
 class TrackDateSubtitle extends ConsumerWidget {
   const TrackDateSubtitle({super.key});
 
@@ -337,25 +339,15 @@ class TrackDateSubtitle extends ConsumerWidget {
     final label =
         '${day.month}月${day.day}日 ${kWeekdayLabels[day.weekday - 1]}曜';
 
-    return InkWell(
-      onTap: () => _pickDate(context, ref, day),
-      child: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              // 時刻ラベルなどの補助テキスト（#667085）より一段濃く・太くし、
-              // 「いま表示している日」として目立たせる。
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF334155),
-              ),
-            ),
-            const Icon(Icons.chevron_right, size: 20, color: Color(0xFF64748B)),
-          ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: () => _pickDate(context, ref, day),
+        child: SectionChip(
+          label: label,
+          trailing:
+              const Icon(Icons.chevron_right, size: 20, color: Color(0xFF64748B)),
         ),
       ),
     );

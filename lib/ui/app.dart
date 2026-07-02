@@ -89,28 +89,22 @@ class _AppShellState extends ConsumerState<AppShell> {
                   Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(top: 6),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            current.label,
-                            style: const TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -1.0,
-                            ),
-                          ),
-                          // Trackのみ、mock同様タイトル直下にスクロール位置へ
-                          // 追従する日付サブ行を表示する。
-                          if (current == AppDestination.track)
-                            const TrackDateSubtitle(),
-                        ],
+                      child: Text(
+                        current.label,
+                        style: const TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1.0,
+                        ),
                       ),
                     ),
                   ),
                 ],
               ),
             ),
+            // Trackのみ、ヘッダ直下にスクロール位置へ追従する日付バーを表示。
+            // タイムライン内の日付区切り（SectionChip）と同じ見た目・横位置。
+            if (current == AppDestination.track) const TrackDateSubtitle(),
             Expanded(
               child: IndexedStack(
                 index: AppDestination.values.indexOf(current),
