@@ -124,32 +124,36 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
   }
 
   Future<List<RecordWithTags>> _attachTags(List<RecordEntry> rows) async {
-    final result = <RecordWithTags>[];
-    for (final row in rows) {
-      final tagRows = await (select(recordTags).join([
-        innerJoin(tags, tags.id.equalsExp(recordTags.tagId)),
-      ])
-            ..where(recordTags.recordId.equals(row.id)))
-          .get();
-      final tagRefs = tagRows
-          .map((r) => r.readTable(tags))
-          .map((t) => TagRef(
-                id: t.id,
-                name: t.name,
-                group: t.group,
-                colorIndex: t.colorIndex,
-              ))
-          .toList();
-      result.add(
-        RecordWithTags(
-          id: row.id,
-          timestamp: row.timestamp,
-          comment: row.comment,
-          value: row.value,
-          tags: tagRefs,
-        ),
+    if (rows.isEmpty) return const [];
+
+    final recordIds = rows.map((r) => r.id).toList();
+    final tagQuery = select(recordTags).join([
+      innerJoin(tags, tags.id.equalsExp(recordTags.tagId)),
+    ])..where(recordTags.recordId.isIn(recordIds));
+
+    final tagRows = await tagQuery.get();
+
+    final tagsByRecordId = <String, List<TagRef>>{};
+    for (final row in tagRows) {
+      final entry = row.readTable(recordTags);
+      final tag = row.readTable(tags);
+      final ref = TagRef(
+        id: tag.id,
+        name: tag.name,
+        group: tag.group,
+        colorIndex: tag.colorIndex,
       );
+      tagsByRecordId.putIfAbsent(entry.recordId, () => []).add(ref);
     }
-    return result;
+
+    return rows.map((row) {
+      return RecordWithTags(
+        id: row.id,
+        timestamp: row.timestamp,
+        comment: row.comment,
+        value: row.value,
+        tags: tagsByRecordId[row.id] ?? const [],
+      );
+    }).toList();
   }
 }
