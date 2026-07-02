@@ -64,37 +64,40 @@ class MockSeeder {
 
   // Stats画面はgroup名「症状」のタグをsymptom、それ以外をactionとして扱う
   // （ui/stats/tag_pair_list.dart）。
-  static const _tagDefs = [
-    ('headache', '頭痛', '症状', false),
-    ('fatigue', '倦怠感', '症状', false),
-    ('stomachache', '腹痛', '症状', false),
-    ('dizziness', 'めまい', '症状', false),
-    ('stiff-shoulder', '肩こり', '症状', true),
-    ('loxonin', 'ロキソニン', '薬', false),
-    ('stomach-medicine', '胃薬', '薬', false),
-    ('vitamin-d', 'ビタミンD', 'サプリ', false),
-    ('magnesium', 'マグネシウム', 'サプリ', false),
-    ('iron', '鉄分', 'サプリ', true),
-    ('walking', 'ウォーキング', '運動', false),
-    ('training', '筋トレ', '運動', false),
-    ('stretch', 'ストレッチ', '運動', false),
-    ('low-pressure', '低気圧', '環境', false),
-    ('heat-wave', '猛暑', '環境', false),
-    ('coffee', 'コーヒー', '食事', false),
-    ('alcohol', '飲酒', '食事', false),
-    ('eating-out', '外食', '食事', true),
+  // 5番目の要素は明示的なチップ配色index（kTagChipPalettes、null=自動）。
+  // 保存色とハッシュ自動配色の両方をUIで確認できるよう一部だけ設定する。
+  static const _tagDefs = <(String, String, String, bool, int?)>[
+    ('headache', '頭痛', '症状', false, 1), // red
+    ('fatigue', '倦怠感', '症状', false, 4), // purple
+    ('stomachache', '腹痛', '症状', false, null),
+    ('dizziness', 'めまい', '症状', false, null),
+    ('stiff-shoulder', '肩こり', '症状', true, null),
+    ('loxonin', 'ロキソニン', '薬', false, null),
+    ('stomach-medicine', '胃薬', '薬', false, null),
+    ('vitamin-d', 'ビタミンD', 'サプリ', false, null),
+    ('magnesium', 'マグネシウム', 'サプリ', false, null),
+    ('iron', '鉄分', 'サプリ', true, null),
+    ('walking', 'ウォーキング', '運動', false, 2), // green
+    ('training', '筋トレ', '運動', false, null),
+    ('stretch', 'ストレッチ', '運動', false, null),
+    ('low-pressure', '低気圧', '環境', false, null),
+    ('heat-wave', '猛暑', '環境', false, null),
+    ('coffee', 'コーヒー', '食事', false, 3), // orange
+    ('alcohol', '飲酒', '食事', false, null),
+    ('eating-out', '外食', '食事', true, null),
   ];
 
   static String tagId(String key) => 'seed-tag-$key';
 
   List<TagsCompanion> _buildTags() {
     return [
-      for (final (key, name, group, archived) in _tagDefs)
+      for (final (key, name, group, archived, colorIndex) in _tagDefs)
         TagsCompanion.insert(
           id: tagId(key),
           name: name,
           group: group,
           isArchived: Value(archived),
+          colorIndex: Value(colorIndex),
         ),
     ];
   }

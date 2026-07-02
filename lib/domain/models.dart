@@ -1,10 +1,18 @@
 /// タグの表示に必要な最小限の情報。
 class TagRef {
-  const TagRef({required this.id, required this.name, required this.group});
+  const TagRef({
+    required this.id,
+    required this.name,
+    required this.group,
+    this.colorIndex,
+  });
 
   final String id;
   final String name;
   final String group;
+
+  /// チップ配色パレットのindex。nullならタグ名ハッシュで自動決定する。
+  final int? colorIndex;
 }
 
 /// タイムライン表示や統計計算で使う、タグ付きレコード。

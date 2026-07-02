@@ -74,6 +74,45 @@ void main() {
     expect(result[1].timestamp, DateTime(2026, 6, 29, 7, 40));
   });
 
+  test('watchSinceはfrom以降のレコードのみ新しい順で返す（from当時刻を含む）', () async {
+    await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 28, 23, 59),
+      value: 0,
+    );
+    await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 29),
+      value: 1,
+    );
+    await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 30, 14, 20),
+      value: -1,
+    );
+
+    final result = await db.recordsDao.watchSince(DateTime(2026, 6, 29)).first;
+
+    expect(result, hasLength(2));
+    expect(result[0].timestamp, DateTime(2026, 6, 30, 14, 20));
+    expect(result[1].timestamp, DateTime(2026, 6, 29));
+  });
+
+  test('watchOldestTimestampはレコードが無ければnull、あれば最古の時刻を返す', () async {
+    expect(await db.recordsDao.watchOldestTimestamp().first, isNull);
+
+    await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 29, 14, 20),
+      value: 0,
+    );
+    await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 1, 8, 0),
+      value: 1,
+    );
+
+    expect(
+      await db.recordsDao.watchOldestTimestamp().first,
+      DateTime(2026, 6, 1, 8, 0),
+    );
+  });
+
   test('レコードを削除するとタグ紐付けもカスケード削除される', () async {
     final tagId = await db.tagsDao.createTag(name: '薬', group: '薬');
     final recordId = await db.recordsDao.createRecord(

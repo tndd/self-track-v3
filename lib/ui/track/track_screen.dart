@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
 import '../../domain/models.dart';
 import '../../providers/composer_provider.dart';
@@ -7,8 +8,11 @@ import '../../providers/database_providers.dart';
 import '../../providers/track_providers.dart';
 import '../theme.dart';
 import 'composer_card.dart';
+import 'timeline_entries.dart';
 import 'timeline_item.dart';
 
+/// Trackタイムライン。mock/track.htmlを基に、チャット式（最新が最下部、
+/// 上方向スクロールで過去日を自動読み込み）に変更している。
 class TrackScreen extends ConsumerStatefulWidget {
   const TrackScreen({super.key});
 
@@ -18,11 +22,103 @@ class TrackScreen extends ConsumerStatefulWidget {
 
 class _TrackScreenState extends ConsumerState<TrackScreen> {
   final _commentController = TextEditingController();
+  final _itemScrollController = ItemScrollController();
+  final _itemPositionsListener = ItemPositionsListener.create();
+
+  /// 直近のビルドで表示したエントリ列。位置リスナーからの参照用。
+  List<TimelineEntry> _entries = const [];
+  DateTime? _pendingJumpDay;
+  bool _positionsSyncScheduled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _itemPositionsListener.itemPositions.addListener(_onPositionsChanged);
+  }
 
   @override
   void dispose() {
+    _itemPositionsListener.itemPositions.removeListener(_onPositionsChanged);
     _commentController.dispose();
     super.dispose();
+  }
+
+  /// 位置リスナーはレイアウト中にも発火するため、provider更新や
+  /// 追加読み込みはフレーム完了後にまとめて行う。
+  void _onPositionsChanged() {
+    if (_positionsSyncScheduled) return;
+    _positionsSyncScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _positionsSyncScheduled = false;
+      if (mounted) _syncFromPositions();
+    });
+  }
+
+  void _syncFromPositions() {
+    final positions = _itemPositionsListener.itemPositions.value;
+    if (positions.isEmpty || _entries.isEmpty) return;
+
+    // reverse:true のためleading edgeは画面下端。画面内で最も上に
+    // 見えているのはindexが最大のアイテム。
+    var topIndex = -1;
+    for (final pos in positions) {
+      if (pos.itemTrailingEdge > 0 && pos.index > topIndex) {
+        topIndex = pos.index;
+      }
+    }
+    if (topIndex < 0) return;
+    topIndex = topIndex.clamp(0, _entries.length - 1);
+
+    // 日付サブ行の追従: 最上部エントリの属する日を通知する。
+    DateTime? day;
+    for (var i = topIndex; i >= 0 && day == null; i--) {
+      day = switch (_entries[i]) {
+        TimelineRecordEntry(:final record) => DateTime(
+            record.timestamp.year, record.timestamp.month, record.timestamp.day),
+        TimelineDateHeaderEntry(:final day) => day,
+        TimelineLoadingEntry() => null,
+      };
+    }
+    if (day != null && ref.read(visibleTimelineDayProvider) != day) {
+      ref.read(visibleTimelineDayProvider.notifier).state = day;
+    }
+
+    // 最上部付近に到達したら過去方向へウィンドウを広げる。
+    if (topIndex >= _entries.length - 2) {
+      _extendWindow();
+    }
+  }
+
+  void _extendWindow() {
+    if (!ref.read(hasMoreTimelineProvider)) return;
+    // ウィンドウ拡張による再購読中の多重発火を防ぐ。
+    if (ref.read(timelineProvider).isLoading) return;
+
+    final notifier = ref.read(timelineWindowStartProvider.notifier);
+    var next = notifier.state.subtract(const Duration(days: 14));
+    final oldest = ref.read(oldestRecordTimestampProvider).value;
+    if (oldest != null) {
+      final oldestDay = DateTime(oldest.year, oldest.month, oldest.day);
+      if (next.isBefore(oldestDay)) next = oldestDay;
+      // ウィンドウ内に1件も無い場合は最古日まで一気に広げる。
+      if ((ref.read(timelineProvider).value ?? const []).isEmpty) {
+        next = oldestDay;
+      }
+    }
+    notifier.state = next;
+  }
+
+  /// ジャンプ先の日のヘッダに最も近いエントリ位置。配列は新しい順なので、
+  /// 先頭から走査して最初に見つかる「日付がtarget以前のヘッダ」が
+  /// target当日（無記録日の場合は直近の過去日）のヘッダになる。
+  int _indexForDay(List<TimelineEntry> entries, DateTime target) {
+    for (var i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      if (entry is TimelineDateHeaderEntry && !entry.day.isAfter(target)) {
+        return i;
+      }
+    }
+    return entries.length - 1;
   }
 
   Future<void> _submit() async {
@@ -52,20 +148,6 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
     ref.read(composerProvider.notifier).reset();
     _commentController.clear();
     if (mounted) FocusScope.of(context).unfocus();
-  }
-
-  Future<void> _pickDate() async {
-    final current = ref.read(selectedDateProvider);
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      ref.read(selectedDateProvider.notifier).state =
-          DateTime(picked.year, picked.month, picked.day);
-    }
   }
 
   void _startEdit(RecordWithTags record) {
@@ -131,56 +213,102 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
     }
   }
 
-  static const _weekdayLabels = ['月', '火', '水', '木', '金', '土', '日'];
+  void _collapseComposer() {
+    ref.read(composerProvider.notifier).collapse();
+    FocusScope.of(context).unfocus();
+  }
 
   @override
   Widget build(BuildContext context) {
+    // DatePicker / Calendarからの日付ジャンプ要求。ウィンドウを対象日まで
+    // 広げてから、データ描画後にその日のヘッダ位置へジャンプする。
+    ref.listen<int>(dateJumpSeqProvider, (prev, next) {
+      final day = ref.read(selectedDateProvider);
+      final windowNotifier = ref.read(timelineWindowStartProvider.notifier);
+      if (day.isBefore(windowNotifier.state)) {
+        windowNotifier.state = day;
+      }
+      setState(() => _pendingJumpDay = day);
+    });
+
     final timelineAsync = ref.watch(timelineProvider);
-    final selectedDate = ref.watch(selectedDateProvider);
-    final dateLabel =
-        '${selectedDate.month}月${selectedDate.day}日 ${_weekdayLabels[selectedDate.weekday - 1]}曜';
+    final hasMore = ref.watch(hasMoreTimelineProvider);
+    final isComposerExpanded =
+        ref.watch(composerProvider.select((s) => s.isExpanded));
+
+    final entries = buildTimelineEntries(
+      timelineAsync.value ?? const [],
+      hasMore: hasMore,
+    );
+    _entries = entries;
+
+    if (_pendingJumpDay != null && entries.isNotEmpty && !timelineAsync.isLoading) {
+      final index = _indexForDay(entries, _pendingJumpDay!);
+      _pendingJumpDay = null;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _itemScrollController.isAttached) {
+          // reverse:true ではalignment=0が画面下端。ヘッダを画面上部寄せにする。
+          _itemScrollController.jumpTo(index: index, alignment: 0.85);
+        }
+      });
+    }
+
+    final Widget timeline;
+    if (entries.isEmpty) {
+      timeline = timelineAsync.isLoading && !timelineAsync.hasValue
+          ? const Center(child: CircularProgressIndicator())
+          : Center(
+              child: timelineAsync.hasError
+                  ? Text('読み込みエラー: ${timelineAsync.error}')
+                  : const Text('まだ記録がありません。'),
+            );
+    } else {
+      timeline = ScrollablePositionedList.builder(
+        reverse: true,
+        itemScrollController: _itemScrollController,
+        itemPositionsListener: _itemPositionsListener,
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 170),
+        itemCount: entries.length,
+        itemBuilder: (context, index) {
+          if (index < 0 || index >= entries.length) {
+            return const SizedBox.shrink();
+          }
+          return switch (entries[index]) {
+            TimelineRecordEntry(:final record) => TimelineItem(
+                key: ValueKey(record.id),
+                record: record,
+                onLongPress: () => _showLongPressMenu(record),
+              ),
+            TimelineDateHeaderEntry(:final label, :final day) =>
+              _DateHeader(key: ValueKey('header-$day'), label: label),
+            TimelineLoadingEntry() => const Padding(
+                padding: EdgeInsets.symmetric(vertical: 16),
+                child: Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+          };
+        },
+      );
+    }
 
     return Stack(
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            InkWell(
-              onTap: _pickDate,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Row(
-                  children: [
-                    Text(dateLabel, style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
-                    Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
-                  ],
-                ),
-              ),
+        Positioned.fill(child: timeline),
+        // Composer展開中は画面外タップでパネルを閉じる（mockのscrim相当）。
+        if (isComposerExpanded)
+          Positioned.fill(
+            child: GestureDetector(
+              key: const ValueKey('composer-scrim'),
+              behavior: HitTestBehavior.opaque,
+              onTap: _collapseComposer,
+              child: const ColoredBox(color: Color(0x0F0F172A)),
             ),
-            Expanded(
-              child: timelineAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(child: Text('読み込みエラー: $error')),
-                data: (records) {
-                  if (records.isEmpty) {
-                    return const Center(child: Text('この日の記録はまだありません。'));
-                  }
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
-                    itemCount: records.length,
-                    itemBuilder: (context, index) {
-                      final record = records[index];
-                      return TimelineItem(
-                        record: record,
-                        onLongPress: () => _showLongPressMenu(record),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
         Positioned(
           left: 0,
           right: 0,
@@ -188,6 +316,77 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
           child: ComposerCard(commentController: _commentController, onSubmit: _submit),
         ),
       ],
+    );
+  }
+}
+
+/// ヘッダ（AppShell）のタイトル直下に表示する日付サブ行。
+/// スクロールで最上部に見えている日を常に表示し、タップでDatePickerを開く。
+class TrackDateSubtitle extends ConsumerWidget {
+  const TrackDateSubtitle({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final day = ref.watch(visibleTimelineDayProvider) ?? _today();
+    final label =
+        '${day.month}月${day.day}日 ${kWeekdayLabels[day.weekday - 1]}曜';
+
+    return InkWell(
+      onTap: () => _pickDate(context, ref, day),
+      child: Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(fontSize: 16, color: Color(0xFF667085)),
+            ),
+            const Icon(Icons.chevron_right, size: 20, color: Color(0xFF98A2B3)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  DateTime _today() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  Future<void> _pickDate(BuildContext context, WidgetRef ref, DateTime current) async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: current,
+      firstDate: DateTime(2000),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      requestDateJump(ref, picked);
+    }
+  }
+}
+
+/// チャットアプリ風の日付見出し（各日のレコード群の直上に表示）。
+class _DateHeader extends StatelessWidget {
+  const _DateHeader({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Center(
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFF667085),
+          ),
+        ),
+      ),
     );
   }
 }

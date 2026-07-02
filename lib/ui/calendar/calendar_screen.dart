@@ -60,7 +60,7 @@ class CalendarScreen extends ConsumerWidget {
               month: month,
               scores: monthScores,
               onDayTap: (day) {
-                ref.read(selectedDateProvider.notifier).state = day;
+                requestDateJump(ref, day);
                 ref.read(currentDestinationProvider.notifier).state = AppDestination.track;
               },
             ),

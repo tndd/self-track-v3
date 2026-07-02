@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 /// アプリの5つの遷移先。mock/menu.png のドロップダウンメニューに準拠し、
 /// Drawer（横スライド）ではなくハンバーガーアイコン直下に浮かぶカード型メニューで切り替える。
 enum AppDestination {
-  track('Today', Icons.today_outlined),
+  track('Track', Icons.today_outlined),
   calendar('Calendar', Icons.calendar_month_outlined),
   stats('Analysis', Icons.insights_outlined),
   tags('Tags', Icons.sell_outlined),

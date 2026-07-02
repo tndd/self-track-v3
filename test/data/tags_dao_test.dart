@@ -61,10 +61,34 @@ void main() {
   test('タグを編集すると名前とグループが更新される', () async {
     final id = await db.tagsDao.createTag(name: 'コーヒー', group: '行動');
 
-    await db.tagsDao.updateTag(id: id, name: 'カフェイン', group: '嗜好品');
+    await db.tagsDao.updateTag(
+        id: id, name: 'カフェイン', group: '嗜好品', colorIndex: null);
 
     final all = await db.tagsDao.watchAll().first;
     expect(all.single.name, 'カフェイン');
     expect(all.single.group, '嗜好品');
+  });
+
+  test('colorIndex付きでタグを作成・変更・自動配色に戻せる', () async {
+    // 未指定（自動配色）で作成するとnull。
+    final autoId = await db.tagsDao.createTag(name: '散歩', group: '運動');
+    var all = await db.tagsDao.watchAll().first;
+    expect(all.single.colorIndex, isNull);
+    expect(autoId, isNotEmpty);
+
+    // 明示指定で作成。
+    final id = await db.tagsDao.createTag(name: '頭痛', group: '症状', colorIndex: 1);
+    all = await db.tagsDao.watchAll().first;
+    expect(all.firstWhere((t) => t.id == id).colorIndex, 1);
+
+    // 変更。
+    await db.tagsDao.updateTag(id: id, name: '頭痛', group: '症状', colorIndex: 6);
+    all = await db.tagsDao.watchAll().first;
+    expect(all.firstWhere((t) => t.id == id).colorIndex, 6);
+
+    // nullを渡すと自動配色に戻る。
+    await db.tagsDao.updateTag(id: id, name: '頭痛', group: '症状', colorIndex: null);
+    all = await db.tagsDao.watchAll().first;
+    expect(all.firstWhere((t) => t.id == id).colorIndex, isNull);
   });
 }

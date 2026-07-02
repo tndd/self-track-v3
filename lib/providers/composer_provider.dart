@@ -60,6 +60,14 @@ class ComposerNotifier extends Notifier<ComposerState> {
     state = state.copyWith(isTagZoneOpen: !state.isTagZoneOpen);
   }
 
+  /// パネル外タップ（scrim）で閉じる。選択済みタグ・体調・編集中の
+  /// レコードは保持し、パネルの展開状態だけを畳む。
+  void collapse() {
+    if (state.isExpanded || state.isTagZoneOpen) {
+      state = state.copyWith(isExpanded: false, isTagZoneOpen: false);
+    }
+  }
+
   void selectCondition(int uiValue) {
     state = state.copyWith(conditionUiValue: uiValue);
   }

@@ -58,9 +58,9 @@ void main() {
     expect(find.text('全てのデータを削除しました。'), findsOneWidget);
 
     // 削除後: 例外を投げずに各画面が空状態表示に切り替わることを確認する。
-    await goTo(tester, 'Today');
+    await goTo(tester, 'Track');
     expect(find.text('削除前のコメント'), findsNothing);
-    expect(find.text('この日の記録はまだありません。'), findsOneWidget);
+    expect(find.text('まだ記録がありません。'), findsOneWidget);
     expect(tester.takeException(), isNull);
 
     await goTo(tester, 'Tags');

@@ -13,20 +13,36 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
   static const _uuid = Uuid();
 
   /// タグを新規作成する。`name`はUNIQUE制約により重複登録時は例外を投げる。
-  Future<String> createTag({required String name, required String group}) {
+  /// [colorIndex]はチップ配色パレットのindex（null=タグ名ハッシュで自動）。
+  Future<String> createTag({
+    required String name,
+    required String group,
+    int? colorIndex,
+  }) {
     final id = _uuid.v4();
     return into(tags)
-        .insert(TagsCompanion.insert(id: id, name: name, group: group))
+        .insert(TagsCompanion.insert(
+          id: id,
+          name: name,
+          group: group,
+          colorIndex: Value(colorIndex),
+        ))
         .then((_) => id);
   }
 
+  /// [colorIndex]は常に上書きする（nullを渡すと自動配色に戻る）。
   Future<void> updateTag({
     required String id,
     required String name,
     required String group,
+    int? colorIndex,
   }) {
     return (update(tags)..where((t) => t.id.equals(id))).write(
-      TagsCompanion(name: Value(name), group: Value(group)),
+      TagsCompanion(
+        name: Value(name),
+        group: Value(group),
+        colorIndex: Value(colorIndex),
+      ),
     );
   }
 
