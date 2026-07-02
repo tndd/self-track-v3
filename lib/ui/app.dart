@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'calendar/calendar_screen.dart';
 import 'settings/settings_screen.dart';
@@ -22,6 +23,12 @@ enum AppDestination {
   final IconData icon;
 }
 
+/// 現在表示中の画面。Calendarの日付タップからTrackへ遷移するなど、
+/// 画面をまたいだナビゲーションを可能にするためRiverpodで公開する。
+final currentDestinationProvider = StateProvider<AppDestination>(
+  (ref) => AppDestination.track,
+);
+
 class SelfTrackApp extends StatelessWidget {
   const SelfTrackApp({super.key});
 
@@ -36,20 +43,19 @@ class SelfTrackApp extends StatelessWidget {
   }
 }
 
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
 
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
-  AppDestination _current = AppDestination.track;
+class _AppShellState extends ConsumerState<AppShell> {
   final OverlayPortalController _menuController = OverlayPortalController();
   final LayerLink _menuLink = LayerLink();
 
   void _select(AppDestination destination) {
-    setState(() => _current = destination);
+    ref.read(currentDestinationProvider.notifier).state = destination;
     _menuController.hide();
   }
 
@@ -70,6 +76,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    final current = ref.watch(currentDestinationProvider);
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -86,7 +93,7 @@ class _AppShellState extends State<AppShell> {
                       controller: _menuController,
                       overlayChildBuilder: (context) => _MenuOverlay(
                         link: _menuLink,
-                        current: _current,
+                        current: current,
                         onSelect: _select,
                         onDismiss: _menuController.hide,
                       ),
@@ -100,7 +107,7 @@ class _AppShellState extends State<AppShell> {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
-                        _current.label,
+                        current.label,
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
@@ -114,7 +121,7 @@ class _AppShellState extends State<AppShell> {
             ),
             Expanded(
               child: IndexedStack(
-                index: AppDestination.values.indexOf(_current),
+                index: AppDestination.values.indexOf(current),
                 children: AppDestination.values.map(_buildScreen).toList(),
               ),
             ),
