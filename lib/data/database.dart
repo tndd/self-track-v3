@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 import 'daos/records_dao.dart';
 import 'daos/tags_dao.dart';
@@ -41,5 +42,9 @@ class AppDatabase extends _$AppDatabase {
 }
 
 QueryExecutor _openConnection() {
-  return driftDatabase(name: 'self_track_v3');
+  // デバッグビルドでは本番DB（self_track_v3）を汚さないよう別ファイルを開く。
+  // kDebugModeはコンパイル時定数のため、releaseビルドでは常に本番DBになる。
+  // テストは AppDatabase.withExecutor 経由のためこの分岐を通らない。
+  final name = kDebugMode ? 'self_track_v3_dev' : 'self_track_v3';
+  return driftDatabase(name: name);
 }
