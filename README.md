@@ -1,17 +1,29 @@
-# self_track_v3
+# self-track-v3
 
-A new Flutter project.
+体調管理と行動ログを記録し、行動と体調の因果関係を分析するためのFlutterアプリ。
+仕様は `docs/design.md`、実装計画は `docs/plan.md` を参照。
 
-## Getting Started
+## セットアップ
 
-This project is a starting point for a Flutter application.
+```sh
+flutter pub get
+dart run build_runner build --delete-conflicting-outputs  # Driftのコード生成
+```
 
-A few resources to get you started if this is your first Flutter project:
+## 開発
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```sh
+flutter analyze
+flutter test
+flutter run
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+データは端末内のSQLite（Drift）にのみ保存され、クラウド同期は行わない（v1.0時点）。
+
+## 画面構成
+
+- **Today (Track)**: 体調・タグ・コメントの記録とタイムライン表示
+- **Calendar**: 月単位の体調の推移と簡易統計
+- **Analysis (Stats)**: 直近の体調推移、イベントロック平均、行動×症状の関連分析
+- **Tags**: タグの追加・編集・アーカイブ
+- **Settings**: データの全削除
