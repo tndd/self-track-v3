@@ -1,0 +1,32 @@
+name: self_track_v3
+description: "体調管理と行動ログの因果関係を分析するためのアプリ。"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  drift: ^2.20.0
+  drift_flutter: ^0.2.0
+  flutter_riverpod: ^2.6.1
+  fl_chart: ^0.69.0
+  uuid: ^4.5.1
+  intl: ^0.19.0
+  path_provider: ^2.1.4
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  build_runner: ^2.4.13
+  drift_dev: ^2.20.0
+
+flutter:
+  uses-material-design: true
