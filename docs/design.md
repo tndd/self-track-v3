@@ -36,7 +36,7 @@ actionもeventもtagでまとめてしまう設計。
 [tags (マスタ)]
 - id: UUID
 - name: VARCHAR (例: "頭痛", "ロキソニン")
-- type: ENUM ('action', 'symptom', 'event')  <-- 説明変数か目的変数かは、計算や目的にもよって変わり得る
+- group: STRING('薬', 'サプリ', '運動', '症状' ...) <-- 説明変数か目的変数かは、計算や目的にもよって変わり得る。基本的には'症状'がyになる想定。
 
 [record_tags (中間テーブル)]
 - record_id: UUID
