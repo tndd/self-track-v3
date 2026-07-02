@@ -39,6 +39,9 @@ void main() {
     expect(tags, hasLength(18));
     expect(tags.where((t) => t.isArchived), hasLength(3));
     expect(tags.where((t) => t.group == '症状'), isNotEmpty);
+    // 保存色（頭痛=赤index1）と自動配色（colorIndex=null）が混在する。
+    expect(tags.firstWhere((t) => t.name == '頭痛').colorIndex, 1);
+    expect(tags.where((t) => t.colorIndex == null), isNotEmpty);
   });
 
   test('体調値はDB値の範囲（-2〜2）に収まり、コメント付きレコードが存在する', () async {

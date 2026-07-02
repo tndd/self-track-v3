@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
+import '../tag_colors.dart';
 import 'tag_form_dialog.dart';
 
 class TagsScreen extends ConsumerWidget {
@@ -12,7 +13,11 @@ class TagsScreen extends ConsumerWidget {
     final groups = allTags.map((t) => t.group).toSet().toList()..sort();
     final result = await showTagFormDialog(context, existingGroups: groups);
     if (result == null) return;
-    await ref.read(tagsDaoProvider).createTag(name: result.name, group: result.group);
+    await ref.read(tagsDaoProvider).createTag(
+          name: result.name,
+          group: result.group,
+          colorIndex: result.colorIndex,
+        );
   }
 
   Future<void> _editTag(BuildContext context, WidgetRef ref, Tag tag, List<Tag> allTags) async {
@@ -22,11 +27,15 @@ class TagsScreen extends ConsumerWidget {
       existingGroups: groups,
       initialName: tag.name,
       initialGroup: tag.group,
+      initialColorIndex: tag.colorIndex,
     );
     if (result == null) return;
-    await ref
-        .read(tagsDaoProvider)
-        .updateTag(id: tag.id, name: result.name, group: result.group);
+    await ref.read(tagsDaoProvider).updateTag(
+          id: tag.id,
+          name: result.name,
+          group: result.group,
+          colorIndex: result.colorIndex,
+        );
   }
 
   @override
@@ -96,7 +105,21 @@ class _TagTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = resolveTagChipColors(tag.name, tag.colorIndex);
     return ListTile(
+      // 実効配色（保存色 or タグ名ハッシュ）のプレビュー。
+      leading: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: colors.background,
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFE5E7EB)),
+        ),
+        child: Center(
+          child: Icon(Icons.sell_outlined, size: 16, color: colors.foreground),
+        ),
+      ),
       title: Text(
         tag.name,
         style: TextStyle(

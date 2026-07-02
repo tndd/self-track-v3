@@ -68,4 +68,50 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 100));
   });
+
+  testWidgets('色スウォッチ付きでタグを作成し、編集で自動配色に戻せる', (tester) async {
+    final db = AppDatabase.withExecutor(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MaterialApp(home: TagsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 赤（index 1）を選んで作成。
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, '名前'), '頭痛');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'グループ（例: 薬, サプリ, 症状）'),
+      '症状',
+    );
+    await tester.tap(find.byKey(const ValueKey('color-swatch-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    // 画面側のallTagsProviderと同じwatchAll()ストリームを購読すると、
+    // driftの共有ストリームへの.firstキャンセルが「Cannot add event while
+    // adding stream」を誘発しテストが完了しなくなるため、ワンショットで読む。
+    var tags = await db.select(db.tags).get();
+    expect(tags.single.colorIndex, 1);
+
+    // 編集で「自動」に戻すとnullになる。
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('color-swatch-auto')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    tags = await db.select(db.tags).get();
+    expect(tags.single.colorIndex, isNull);
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 100));
+  });
 }

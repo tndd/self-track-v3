@@ -22,6 +22,20 @@ void main() {
     }
   });
 
+  test('resolveTagChipColorsは保存されたcolorIndexを優先し、null/範囲外はハッシュに戻る', () {
+    // 明示indexが優先される。
+    final explicit = resolveTagChipColors('頭痛', 1);
+    expect(explicit.background, kTagChipPalettes[1].background);
+
+    // nullはタグ名ハッシュと同じ。
+    final auto = resolveTagChipColors('頭痛', null);
+    expect(auto.background, tagChipColorsFor('頭痛').background);
+
+    // 範囲外のindex（将来のパレット縮小など）もハッシュにフォールバック。
+    final outOfRange = resolveTagChipColors('頭痛', 99);
+    expect(outOfRange.background, tagChipColorsFor('頭痛').background);
+  });
+
   test('異なるタグ名で異なる色になる組み合わせが存在する', () {
     final names = ['頭痛', '倦怠感', 'コーヒー', 'ロキソニン', 'ウォーキング', '低気圧', '飲酒'];
     final backgrounds = names.map((n) => tagChipColorsFor(n).background).toSet();

@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 
-/// タグの新規作成・編集フォーム。呼び出し側が確定した (name, group) を受け取る。
+import '../tag_colors.dart';
+
+/// タグの新規作成・編集フォーム。呼び出し側が確定した (name, group, colorIndex) を受け取る。
 class TagFormResult {
-  const TagFormResult({required this.name, required this.group});
+  const TagFormResult({
+    required this.name,
+    required this.group,
+    required this.colorIndex,
+  });
 
   final String name;
   final String group;
+
+  /// チップ配色パレットのindex。null=タグ名ハッシュによる自動配色。
+  final int? colorIndex;
 }
 
 Future<TagFormResult?> showTagFormDialog(
@@ -13,6 +22,7 @@ Future<TagFormResult?> showTagFormDialog(
   required List<String> existingGroups,
   String? initialName,
   String? initialGroup,
+  int? initialColorIndex,
 }) {
   return showDialog<TagFormResult>(
     context: context,
@@ -20,6 +30,7 @@ Future<TagFormResult?> showTagFormDialog(
       existingGroups: existingGroups,
       initialName: initialName,
       initialGroup: initialGroup,
+      initialColorIndex: initialColorIndex,
     ),
   );
 }
@@ -29,11 +40,13 @@ class _TagFormDialog extends StatefulWidget {
     required this.existingGroups,
     this.initialName,
     this.initialGroup,
+    this.initialColorIndex,
   });
 
   final List<String> existingGroups;
   final String? initialName;
   final String? initialGroup;
+  final int? initialColorIndex;
 
   @override
   State<_TagFormDialog> createState() => _TagFormDialogState();
@@ -43,12 +56,14 @@ class _TagFormDialogState extends State<_TagFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _groupController;
+  int? _colorIndex;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initialName ?? '');
     _groupController = TextEditingController(text: widget.initialGroup ?? '');
+    _colorIndex = widget.initialColorIndex;
   }
 
   @override
@@ -64,6 +79,7 @@ class _TagFormDialogState extends State<_TagFormDialog> {
       TagFormResult(
         name: _nameController.text.trim(),
         group: _groupController.text.trim(),
+        colorIndex: _colorIndex,
       ),
     );
   }
@@ -77,6 +93,7 @@ class _TagFormDialogState extends State<_TagFormDialog> {
         key: _formKey,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextFormField(
               controller: _nameController,
@@ -84,6 +101,8 @@ class _TagFormDialogState extends State<_TagFormDialog> {
               decoration: const InputDecoration(labelText: '名前'),
               validator: (value) =>
                   (value == null || value.trim().isEmpty) ? '名前を入力してください' : null,
+              // 自動配色プレビューを名前の変化に追従させる。
+              onChanged: (_) => setState(() {}),
             ),
             const SizedBox(height: 12),
             Autocomplete<String>(
@@ -109,6 +128,14 @@ class _TagFormDialogState extends State<_TagFormDialog> {
                 );
               },
             ),
+            const SizedBox(height: 20),
+            const Text('色', style: TextStyle(fontSize: 13, color: Colors.grey)),
+            const SizedBox(height: 8),
+            _ColorSelector(
+              selected: _colorIndex,
+              previewName: _nameController.text.trim(),
+              onSelect: (index) => setState(() => _colorIndex = index),
+            ),
           ],
         ),
       ),
@@ -118,6 +145,70 @@ class _TagFormDialogState extends State<_TagFormDialog> {
           child: const Text('キャンセル'),
         ),
         FilledButton(onPressed: _submit, child: const Text('保存')),
+      ],
+    );
+  }
+}
+
+/// パレット7色 + 「自動」（タグ名ハッシュ）のスウォッチ列。
+class _ColorSelector extends StatelessWidget {
+  const _ColorSelector({
+    required this.selected,
+    required this.previewName,
+    required this.onSelect,
+  });
+
+  final int? selected;
+  final String previewName;
+  final ValueChanged<int?> onSelect;
+
+  @override
+  Widget build(BuildContext context) {
+    final autoColors = tagChipColorsFor(previewName);
+
+    Widget swatch({
+      required int? index,
+      required TagChipColors colors,
+      String? label,
+    }) {
+      final isSelected = selected == index;
+      return InkWell(
+        key: ValueKey('color-swatch-${index ?? 'auto'}'),
+        customBorder: const CircleBorder(),
+        onTap: () => onSelect(index),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: colors.background,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected ? const Color(0xFF111827) : const Color(0xFFE5E7EB),
+              width: isSelected ? 2.5 : 1,
+            ),
+          ),
+          child: Center(
+            child: label != null
+                ? Text(label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: colors.foreground,
+                    ))
+                : Icon(Icons.circle, size: 14, color: colors.foreground),
+          ),
+        ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        // 自動（タグ名ハッシュ）。プレビューとして現在の名前の自動配色を映す。
+        swatch(index: null, colors: autoColors, label: '自動'),
+        for (var i = 0; i < kTagChipPalettes.length; i++)
+          swatch(index: i, colors: kTagChipPalettes[i]),
       ],
     );
   }

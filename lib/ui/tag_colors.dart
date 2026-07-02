@@ -31,3 +31,12 @@ TagChipColors tagChipColorsFor(String name) {
   }
   return kTagChipPalettes[h % kTagChipPalettes.length];
 }
+
+/// タグの実効配色。タグに保存された[colorIndex]（schema v2）があれば
+/// それを優先し、無ければタグ名ハッシュにフォールバックする。
+TagChipColors resolveTagChipColors(String name, int? colorIndex) {
+  if (colorIndex != null && colorIndex >= 0 && colorIndex < kTagChipPalettes.length) {
+    return kTagChipPalettes[colorIndex];
+  }
+  return tagChipColorsFor(name);
+}

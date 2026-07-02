@@ -329,10 +329,12 @@ class _SelectedTagChips extends StatelessWidget {
               label: Text(tag.name),
               labelStyle: TextStyle(
                 fontSize: 15,
-                color: tagChipColorsFor(tag.name).foreground,
+                color: resolveTagChipColors(tag.name, tag.colorIndex).foreground,
               ),
-              backgroundColor: tagChipColorsFor(tag.name).background,
-              deleteIconColor: tagChipColorsFor(tag.name).foreground,
+              backgroundColor:
+                  resolveTagChipColors(tag.name, tag.colorIndex).background,
+              deleteIconColor:
+                  resolveTagChipColors(tag.name, tag.colorIndex).foreground,
               shape: const StadiumBorder(side: BorderSide(color: Colors.transparent)),
               onDeleted: () => onRemove(tag.id),
             ),
@@ -428,22 +430,24 @@ class TagGroupList extends StatelessWidget {
           _TagGroupSection(
             title: '最近使ったタグ',
             children: [
-              for (final tag in recentTags) _buildChip(tag.id, tag.name),
+              for (final tag in recentTags)
+                _buildChip(tag.id, tag.name, tag.colorIndex),
             ],
           ),
         for (final entry in byGroup.entries)
           _TagGroupSection(
             title: entry.key,
             children: [
-              for (final tag in entry.value) _buildChip(tag.id, tag.name),
+              for (final tag in entry.value)
+                _buildChip(tag.id, tag.name, tag.colorIndex),
             ],
           ),
       ],
     );
   }
 
-  Widget _buildChip(String id, String name) {
-    final colors = tagChipColorsFor(name);
+  Widget _buildChip(String id, String name, int? colorIndex) {
+    final colors = resolveTagChipColors(name, colorIndex);
     final selected = selectedIds.contains(id);
     return FilterChip(
       label: Text(name),

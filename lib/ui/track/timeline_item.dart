@@ -88,7 +88,7 @@ class TimelineItem extends StatelessWidget {
                               spacing: 6,
                               runSpacing: 6,
                               children: [
-                                for (final tag in record.tags) _TagChip(label: tag.name),
+                                for (final tag in record.tags) _TagChip(tag: tag),
                               ],
                             ),
                           ),
@@ -132,20 +132,20 @@ class TimelineItem extends StatelessWidget {
 }
 
 class _TagChip extends StatelessWidget {
-  const _TagChip({required this.label});
+  const _TagChip({required this.tag});
 
-  final String label;
+  final TagRef tag;
 
   @override
   Widget build(BuildContext context) {
-    final colors = tagChipColorsFor(label);
+    final colors = resolveTagChipColors(tag.name, tag.colorIndex);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         color: colors.background,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label, style: TextStyle(fontSize: 15, color: colors.foreground)),
+      child: Text(tag.name, style: TextStyle(fontSize: 15, color: colors.foreground)),
     );
   }
 }
