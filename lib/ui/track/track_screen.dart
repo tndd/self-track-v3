@@ -386,24 +386,24 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 補助テキストと同じ薄灰色だと区切りとして埋もれるため、
-    // チャットアプリ風の淡いピル＋濃い文字で「日の区切り」を強調する。
+    // mock/calendar.htmlの.sectionChip（コンテンツを幅いっぱいの灰色タイトル
+    // バーで区切るルール）に合わせた、左寄せ・全幅のピル。寸法はモックの
+    // px（padding 7×13）×1.37。文字は補助テキストより濃くして区切りを強調する。
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE2E8F0),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF334155),
-            ),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFFE2E8F0),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF334155),
           ),
         ),
       ),
