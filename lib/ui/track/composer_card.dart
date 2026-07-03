@@ -28,12 +28,16 @@ class ComposerCard extends ConsumerWidget {
     final composer = ref.watch(composerProvider);
     final notifier = ref.read(composerProvider.notifier);
     final activeTags = ref.watch(activeTagsProvider).value ?? const <Tag>[];
+    // 選択中チップは全タグ（アーカイブ済み含む）から引く。編集対象のレコードに
+    // アーカイブ済みタグが付いている場合、activeTagsだけだとチップが消えて
+    // ユーザーが見えないまま再送信時に再付与されてしまう（外す手段も無くなる）。
+    final allTags = ref.watch(allTagsProvider).value ?? const <Tag>[];
     final recentTags = ref.watch(recentTagsProvider).value ?? const <TagRef>[];
     final level = ConditionLevel.fromUiValue(composer.conditionUiValue);
 
     final selectedTags = [
       for (final id in composer.selectedTagIds)
-        ...activeTags.where((t) => t.id == id),
+        ...allTags.where((t) => t.id == id),
     ];
 
     return Container(
@@ -53,25 +57,29 @@ class ComposerCard extends ConsumerWidget {
         children: [
           if (selectedTags.isNotEmpty)
             _SelectedTagChips(tags: selectedTags, onRemove: notifier.toggleTag),
-          if (composer.isExpanded) ...[
-            if (composer.editingRecordId != null)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  children: [
-                    const Text('記録を編集中',
-                        style: TextStyle(fontSize: 15, color: Colors.grey)),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        notifier.reset();
-                        commentController.clear();
-                      },
-                      child: const Text('編集をやめる'),
-                    ),
-                  ],
-                ),
+          // collapse()は展開状態だけを畳み編集中レコードは保持したままにする
+          // 仕様のため、このバナーは展開状態に関わらず表示する。畳んだ状態でも
+          // 送信ボタンは編集扱いのままになるので、ここが無いと「新規のつもりで
+          // 送信したら既存レコードを上書きしていた」という事故につながる。
+          if (composer.editingRecordId != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  const Text('記録を編集中',
+                      style: TextStyle(fontSize: 15, color: Colors.grey)),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      notifier.reset();
+                      commentController.clear();
+                    },
+                    child: const Text('編集をやめる'),
+                  ),
+                ],
               ),
+            ),
+          if (composer.isExpanded) ...[
             if (composer.isTagZoneOpen) ...[
               // mockのpanelTop: 「Tags」見出し + 右端の全画面ボタン（⛶）。
               Padding(

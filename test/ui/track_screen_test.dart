@@ -278,6 +278,51 @@ void main() {
     await flushPendingTimers(tester);
   });
 
+  testWidgets('編集中にscrimタップで畳んでも編集中バッジが表示され続ける', (tester) async {
+    await db.recordsDao.createRecord(
+      timestamp: DateTime.now(),
+      value: -1,
+      comment: '元コメント',
+    );
+    await pumpTrackScreen(tester);
+
+    await tester.longPress(find.text('元コメント'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('編集'));
+    await tester.pumpAndSettle();
+    expect(find.text('記録を編集中'), findsOneWidget);
+
+    // scrimタップで畳んでも編集状態は保持される仕様のため、
+    // 送信ボタンが誤って既存レコードを上書きしないよう
+    // バッジは畳んだ状態でも表示され続けなければならない。
+    await tester.tap(find.byKey(const ValueKey('composer-scrim')));
+    await tester.pumpAndSettle();
+    expect(find.text('記録を編集中'), findsOneWidget);
+
+    await flushPendingTimers(tester);
+  });
+
+  testWidgets('アーカイブ済みタグ付きレコードを編集すると、そのタグがチップとして表示される', (tester) async {
+    final tagId = await db.tagsDao.createTag(name: '旧タグ', group: '症状');
+    await db.recordsDao.createRecord(
+      timestamp: DateTime.now(),
+      value: 0,
+      comment: 'アーカイブタグ付き',
+      tagIds: [tagId],
+    );
+    await db.tagsDao.archiveTag(tagId);
+    await pumpTrackScreen(tester);
+
+    await tester.longPress(find.text('アーカイブタグ付き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('編集'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(InputChip, '旧タグ'), findsOneWidget);
+
+    await flushPendingTimers(tester);
+  });
+
   testWidgets('タイムラインの記録を長押しして削除できる', (tester) async {
     await db.recordsDao.createRecord(
       timestamp: DateTime.now(),
