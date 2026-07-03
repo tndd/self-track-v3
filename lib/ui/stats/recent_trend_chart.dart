@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../domain/condition_series.dart';
 import '../../domain/daily_score.dart';
 import '../../domain/models.dart';
 
@@ -16,8 +17,16 @@ class RecentTrendChart extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final dayList = [for (var i = days - 1; i >= 0; i--) today.subtract(Duration(days: i))];
+    // 30日分をスコアリングするたびに全レコードから系列を再構築しないよう、
+    // 系列と記録日集合はここで1回だけ作る。
+    final series = buildConditionSeries(records, now: now);
+    final recordedDays = {
+      for (final r in records)
+        DateTime(r.timestamp.year, r.timestamp.month, r.timestamp.day),
+    };
     final scores = [
-      for (final d in dayList) computeDailyAverage(allRecordsAscending: records, day: d, now: now),
+      for (final d in dayList)
+        computeDailyAverageFromSeries(series: series, recordedDays: recordedDays, day: d),
     ];
 
     final spots = <FlSpot>[

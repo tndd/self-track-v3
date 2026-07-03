@@ -50,10 +50,15 @@ double _logHypergeometricP(int a, int rowA, int rowB, int colA, int n) {
       _logFactorial(n);
 }
 
+/// log(n!)の累積キャッシュ（`_logFactorialCache[n]` == log(n!)）。単調増加で
+/// 値も変わらないため、プロセス内で使い回してよい。TagPairListは1回の描画で
+/// action×symptomの全ペアに対しFisher検定を行い、それぞれが `_logHypergeometricP`
+/// を候補表の数だけ呼ぶため、都度O(n)で計算し直すと総和が大きくなる。
+final List<double> _logFactorialCache = [0.0];
+
 double _logFactorial(int n) {
-  var result = 0.0;
-  for (var i = 2; i <= n; i++) {
-    result += math.log(i);
+  for (var i = _logFactorialCache.length; i <= n; i++) {
+    _logFactorialCache.add(_logFactorialCache[i - 1] + math.log(i));
   }
-  return result;
+  return _logFactorialCache[n];
 }

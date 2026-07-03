@@ -10,20 +10,44 @@ import 'models.dart';
 ///
 /// 対象日に実レコードが1件も無い場合はnullを返す（design.md §4.2および
 /// Calendar画面では「記録の無い日」として空白表示にするため）。
+///
+/// Calendar/Statsのように複数日を続けてスコアリングする場合、この関数は
+/// 呼び出しごとに[buildConditionSeries]を全レコードから再構築してしまい
+/// 割高になる。系列と記録日集合を1回だけ作り、[computeDailyAverageFromSeries]
+/// を日数分呼ぶ方が効率的。
 double? computeDailyAverage({
   required List<RecordWithTags> allRecordsAscending,
   required DateTime day,
   required DateTime now,
 }) {
+  final series = buildConditionSeries(allRecordsAscending, now: now);
+  final recordedDays = _recordedDaySet(allRecordsAscending);
+  return computeDailyAverageFromSeries(
+    series: series,
+    recordedDays: recordedDays,
+    day: day,
+  );
+}
+
+Set<DateTime> _recordedDaySet(List<RecordWithTags> records) {
+  return {
+    for (final r in records)
+      DateTime(r.timestamp.year, r.timestamp.month, r.timestamp.day),
+  };
+}
+
+/// [computeDailyAverage]の本体。[series]（[buildConditionSeries]の結果）と
+/// [recordedDays]（レコードが存在する日の集合）を呼び出し側で1回だけ用意し、
+/// 複数日にわたって使い回すことを想定する。
+double? computeDailyAverageFromSeries({
+  required List<ConditionPoint> series,
+  required Set<DateTime> recordedDays,
+  required DateTime day,
+}) {
   final dayStart = DateTime(day.year, day.month, day.day);
   final dayEnd = dayStart.add(const Duration(days: 1));
 
-  final hasRecordThatDay = allRecordsAscending.any(
-    (r) => !r.timestamp.isBefore(dayStart) && r.timestamp.isBefore(dayEnd),
-  );
-  if (!hasRecordThatDay) return null;
-
-  final series = buildConditionSeries(allRecordsAscending, now: now);
+  if (!recordedDays.contains(dayStart)) return null;
 
   final interior = series.where(
     (p) => p.timestamp.isAfter(dayStart) && p.timestamp.isBefore(dayEnd),

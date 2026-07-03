@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/condition_series.dart';
 import '../../domain/daily_score.dart';
 import '../../providers/calendar_providers.dart';
 import '../../providers/navigation_providers.dart';
@@ -22,8 +23,18 @@ class CalendarScreen extends ConsumerWidget {
       error: (error, stack) => Center(child: Text('読み込みエラー: $error')),
       data: (records) {
         final now = DateTime.now();
-        double? scoreFor(DateTime day) =>
-            computeDailyAverage(allRecordsAscending: records, day: day, now: now);
+        // 系列と記録日集合はこの画面で何十回もスコアリングするため、
+        // 日ごとにcomputeDailyAverageを呼んで作り直すのではなく1回だけ構築する。
+        final series = buildConditionSeries(records, now: now);
+        final recordedDays = {
+          for (final r in records)
+            DateTime(r.timestamp.year, r.timestamp.month, r.timestamp.day),
+        };
+        double? scoreFor(DateTime day) => computeDailyAverageFromSeries(
+              series: series,
+              recordedDays: recordedDays,
+              day: day,
+            );
 
         final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
         final monthScores = <int, double?>{
