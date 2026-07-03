@@ -69,6 +69,43 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   });
 
+  testWidgets('同名タグを追加しようとするとエラーメッセージが表示され、重複登録されない', (tester) async {
+    final db = AppDatabase.withExecutor(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MaterialApp(home: TagsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    Future<void> addTag(String name, String group) async {
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextFormField, '名前'), name);
+      await tester.enterText(
+        find.widgetWithText(TextFormField, 'グループ（例: 薬, サプリ, 症状）'),
+        group,
+      );
+      await tester.tap(find.text('保存'));
+      await tester.pumpAndSettle();
+    }
+
+    await addTag('頭痛', '症状');
+    expect(find.text('頭痛'), findsOneWidget);
+
+    await addTag('頭痛', '症状');
+    expect(find.textContaining('既に存在'), findsOneWidget);
+
+    final tags = await db.select(db.tags).get();
+    expect(tags, hasLength(1));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 100));
+  });
+
   testWidgets('色スウォッチ付きでタグを作成し、編集で自動配色に戻せる', (tester) async {
     final db = AppDatabase.withExecutor(NativeDatabase.memory());
     addTearDown(db.close);

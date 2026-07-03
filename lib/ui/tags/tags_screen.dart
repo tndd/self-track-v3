@@ -13,11 +13,15 @@ class TagsScreen extends ConsumerWidget {
     final groups = allTags.map((t) => t.group).toSet().toList()..sort();
     final result = await showTagFormDialog(context, existingGroups: groups);
     if (result == null) return;
-    await ref.read(tagsDaoProvider).createTag(
-          name: result.name,
-          group: result.group,
-          colorIndex: result.colorIndex,
-        );
+    if (!context.mounted) return;
+    await _saveTag(
+      context,
+      () => ref.read(tagsDaoProvider).createTag(
+            name: result.name,
+            group: result.group,
+            colorIndex: result.colorIndex,
+          ),
+    );
   }
 
   Future<void> _editTag(BuildContext context, WidgetRef ref, Tag tag, List<Tag> allTags) async {
@@ -30,12 +34,32 @@ class TagsScreen extends ConsumerWidget {
       initialColorIndex: tag.colorIndex,
     );
     if (result == null) return;
-    await ref.read(tagsDaoProvider).updateTag(
-          id: tag.id,
-          name: result.name,
-          group: result.group,
-          colorIndex: result.colorIndex,
-        );
+    if (!context.mounted) return;
+    await _saveTag(
+      context,
+      () => ref.read(tagsDaoProvider).updateTag(
+            id: tag.id,
+            name: result.name,
+            group: result.group,
+            colorIndex: result.colorIndex,
+          ),
+    );
+  }
+
+  /// `name`はtables.dartでUNIQUE制約が付いており（アーカイブ済みタグとの重複も
+  /// 含む）、フォームの空チェックだけでは弾けない。未処理のままだとダイアログは
+  /// 既に閉じているため、例外が飛んでも「保存されたように見えて何も起きない」
+  /// 状態になっていた。
+  Future<void> _saveTag(BuildContext context, Future<void> Function() save) async {
+    try {
+      await save();
+    } catch (e) {
+      if (!context.mounted) return;
+      final message = e.toString().contains('UNIQUE')
+          ? 'その名前のタグは既に存在します。'
+          : 'タグの保存に失敗しました。';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   @override
