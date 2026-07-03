@@ -79,14 +79,11 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
 
   /// [from, to) の半開区間でレコードをタグ付きで新しい順に取得するストリーム。
   Stream<List<RecordWithTags>> watchByDateRange(DateTime from, DateTime to) {
-    final query = select(records)
-      ..where(
-        (r) =>
-            r.timestamp.isBiggerOrEqualValue(from) &
-            r.timestamp.isSmallerThanValue(to),
-      )
-      ..orderBy([(r) => OrderingTerm.desc(r.timestamp)]);
-    return query.watch().asyncMap(_attachTags);
+    return _watchRecordsWithTags(
+      whereSql: 'timestamp >= ? AND timestamp < ?',
+      variables: [Variable.withDateTime(from), Variable.withDateTime(to)],
+      orderBySql: 'timestamp DESC',
+    );
   }
 
   /// [from]以降の全レコードをタグ付きで新しい順に取得するストリーム。
@@ -94,10 +91,11 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
   /// 開始日を渡して使う。上限を設けないことで、日付をまたいで作成された
   /// 新規レコードも即座に反映される。
   Stream<List<RecordWithTags>> watchSince(DateTime from) {
-    final query = select(records)
-      ..where((r) => r.timestamp.isBiggerOrEqualValue(from))
-      ..orderBy([(r) => OrderingTerm.desc(r.timestamp)]);
-    return query.watch().asyncMap(_attachTags);
+    return _watchRecordsWithTags(
+      whereSql: 'timestamp >= ?',
+      variables: [Variable.withDateTime(from)],
+      orderBySql: 'timestamp DESC',
+    );
   }
 
   /// 最古レコードのtimestamp（レコードが無ければnull）。
@@ -110,46 +108,76 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
 
   /// 統計計算などで使う、全レコードを時刻昇順で取得するストリーム。
   Stream<List<RecordWithTags>> watchAll() {
-    final query = select(records)
-      ..orderBy([(r) => OrderingTerm.asc(r.timestamp)]);
-    return query.watch().asyncMap(_attachTags);
+    return _watchRecordsWithTags(
+      whereSql: '',
+      variables: const [],
+      orderBySql: 'timestamp ASC',
+    );
   }
 
-  /// Composerの「最近使ったタグ」算出に使う、直近レコードを新しい順で取得するストリーム。
+  /// records単体のクエリとしてSQLを組み立てつつ、`readsFrom`でrecord_tags・
+  /// tagsも依存テーブルに含めて監視する。record_tags×tagsをjoinして1つの
+  /// watchクエリにする方式も試したが、Track画面のように複数のwatchが同時に
+  /// 走る状況（ウィジェットテストで再現）でストリームが初回値を配信しない
+  /// まま固まる問題があったため採用していない。ここでは監視クエリ自体は
+  /// records単体（既存のwatch系と同じ安全な形）のまま、依存テーブルだけを
+  /// 広げることで、タグの改名・アーカイブにも反応しつつjoinのリスクを避ける。
+  Stream<List<RecordWithTags>> _watchRecordsWithTags({
+    required String whereSql,
+    required List<Variable<Object>> variables,
+    required String orderBySql,
+  }) {
+    final sql = StringBuffer('SELECT * FROM records');
+    if (whereSql.isNotEmpty) sql.write(' WHERE $whereSql');
+    sql.write(' ORDER BY $orderBySql');
+
+    final query = customSelect(
+      sql.toString(),
+      variables: variables,
+      readsFrom: {records, recordTags, tags},
+    );
+    return query
+        .watch()
+        .map((rows) => [for (final row in rows) records.map(row.data)])
+        .asyncMap(_attachTagsBatch);
+  }
+
+  /// Composerの「最近使ったタグ」算出に使う、直近レコードを新しい順で取得する
+  /// ストリーム。最大[limit]件に絞ってから1本のバッチクエリでタグを付ける。
   Stream<List<RecordWithTags>> watchRecent({int limit = 30}) {
     final query = select(records)
       ..orderBy([(r) => OrderingTerm.desc(r.timestamp)])
       ..limit(limit);
-    return query.watch().asyncMap(_attachTags);
+    return query.watch().asyncMap(_attachTagsBatch);
   }
 
-  Future<List<RecordWithTags>> _attachTags(List<RecordEntry> rows) async {
-    final result = <RecordWithTags>[];
-    for (final row in rows) {
-      final tagRows = await (select(recordTags).join([
-        innerJoin(tags, tags.id.equalsExp(recordTags.tagId)),
-      ])
-            ..where(recordTags.recordId.equals(row.id)))
-          .get();
-      final tagRefs = tagRows
-          .map((r) => r.readTable(tags))
-          .map((t) => TagRef(
-                id: t.id,
-                name: t.name,
-                group: t.group,
-                colorIndex: t.colorIndex,
-              ))
-          .toList();
-      result.add(
-        RecordWithTags(
-          id: row.id,
-          timestamp: row.timestamp,
-          comment: row.comment,
-          value: row.value,
-          tags: tagRefs,
-        ),
+  Future<List<RecordWithTags>> _attachTagsBatch(List<RecordEntry> rows) async {
+    if (rows.isEmpty) return const [];
+    final ids = rows.map((r) => r.id).toList();
+    final tagRows = await (select(recordTags).join([
+      innerJoin(tags, tags.id.equalsExp(recordTags.tagId)),
+    ])
+          ..where(recordTags.recordId.isIn(ids)))
+        .get();
+
+    final tagsByRecordId = <String, List<TagRef>>{};
+    for (final row in tagRows) {
+      final link = row.readTable(recordTags);
+      final tag = row.readTable(tags);
+      (tagsByRecordId[link.recordId] ??= []).add(
+        TagRef(id: tag.id, name: tag.name, group: tag.group, colorIndex: tag.colorIndex),
       );
     }
-    return result;
+
+    return [
+      for (final r in rows)
+        RecordWithTags(
+          id: r.id,
+          timestamp: r.timestamp,
+          comment: r.comment,
+          value: r.value,
+          tags: tagsByRecordId[r.id] ?? const [],
+        ),
+    ];
   }
 }

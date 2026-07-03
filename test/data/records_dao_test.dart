@@ -165,6 +165,26 @@ void main() {
     expect(all.single.tags.single.name, 'ロキソニン');
   });
 
+  test('タグ名を変更すると既存の監視ストリームにも新しい名前が反映される', () async {
+    final tagId = await db.tagsDao.createTag(name: '旧名', group: '症状');
+    await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 29, 12),
+      value: 0,
+      tagIds: [tagId],
+    );
+
+    final stream = db.recordsDao.watchAll().asBroadcastStream();
+    expect((await stream.first).single.tags.single.name, '旧名');
+
+    final renamed = stream.firstWhere(
+      (records) => records.single.tags.single.name == '新名',
+    );
+    await db.tagsDao.updateTag(id: tagId, name: '新名', group: '症状');
+
+    final result = await renamed.timeout(const Duration(seconds: 2));
+    expect(result.single.tags.single.name, '新名');
+  });
+
   test('updateRecordでtagIdsを渡さない場合はタグ紐付けを変更しない', () async {
     final tagId = await db.tagsDao.createTag(name: '運動', group: '行動');
     final recordId = await db.recordsDao.createRecord(
