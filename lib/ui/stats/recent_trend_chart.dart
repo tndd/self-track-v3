@@ -1,24 +1,22 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../domain/daily_score.dart';
-import '../../domain/models.dart';
+import '../../domain/dates.dart';
+import '../../providers/score_providers.dart';
 
 /// plan.md M6「直近30日の体調スコア推移グラフ」。
-class RecentTrendChart extends StatelessWidget {
-  const RecentTrendChart({super.key, required this.records, this.days = 30});
+/// 日次スコアはメモ化済みのdailyAverageProviderから取得する。
+class RecentTrendChart extends ConsumerWidget {
+  const RecentTrendChart({super.key, this.days = 30});
 
-  final List<RecordWithTags> records;
   final int days;
 
   @override
-  Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final today = startOfDay(ref.watch(nowProvider));
     final dayList = [for (var i = days - 1; i >= 0; i--) today.subtract(Duration(days: i))];
-    final scores = [
-      for (final d in dayList) computeDailyAverage(allRecordsAscending: records, day: d, now: now),
-    ];
+    final scores = [for (final d in dayList) ref.watch(dailyAverageProvider(d))];
 
     final spots = <FlSpot>[
       for (var i = 0; i < scores.length; i++)
@@ -43,6 +41,11 @@ class RecentTrendChart extends StatelessWidget {
                   )
                 : LineChart(
                     LineChartData(
+                      // 記録の無い日が端にあってもX軸が全期間に固定されるよう
+                      // 明示する。自動スケールに任せると下の日付ラベル
+                      // （30日前/今日）と折れ線の範囲がズレる。
+                      minX: 0,
+                      maxX: (days - 1).toDouble(),
                       minY: -2,
                       maxY: 2,
                       gridData: const FlGridData(show: false),

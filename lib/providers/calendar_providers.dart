@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../domain/dates.dart';
 import '../domain/models.dart';
 import 'database_providers.dart';
 
@@ -11,6 +12,5 @@ final allRecordsProvider = StreamProvider.autoDispose<List<RecordWithTags>>((ref
 
 /// Calendar画面で表示中の月（月初の日付で表す）。
 final currentMonthProvider = StateProvider<DateTime>((ref) {
-  final now = DateTime.now();
-  return DateTime(now.year, now.month, 1);
+  return startOfMonth(DateTime.now());
 });

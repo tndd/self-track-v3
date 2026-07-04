@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:self_track_v3/data/database.dart';
 import 'package:self_track_v3/providers/database_providers.dart';
 import 'package:self_track_v3/providers/navigation_providers.dart';
+import 'package:self_track_v3/providers/score_providers.dart';
 import 'package:self_track_v3/providers/track_providers.dart';
 import 'package:self_track_v3/ui/app.dart';
 import 'package:self_track_v3/ui/calendar/calendar_screen.dart';
@@ -25,24 +26,32 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
   }
 
+  // 「現在時刻」を実行日の実時刻から切り離す。当日は部分積分・未来日はnull
+  // という日次スコア仕様のため、テストデータの日付とnowの前後関係を固定する。
+  // currentMonthProviderは実時刻の月初を使うため、月は実行時の当月に合わせる。
+  final realNow = DateTime.now();
+  final fixedNow = DateTime(realNow.year, realNow.month, 25, 12);
+
   testWidgets('月移動、今月の割合、7日間の傾向が実データから描画される', (tester) async {
-    final now = DateTime.now();
-    final thisMonthDay = DateTime(now.year, now.month, 10, 9);
+    final thisMonthDay = DateTime(fixedNow.year, fixedNow.month, 10, 9);
     await db.recordsDao.createRecord(timestamp: thisMonthDay, value: 2);
     await db.recordsDao.createRecord(
-      timestamp: DateTime(now.year, now.month, 11, 9),
+      timestamp: DateTime(fixedNow.year, fixedNow.month, 11, 9),
       value: -2,
     );
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        overrides: [
+          appDatabaseProvider.overrideWithValue(db),
+          nowProvider.overrideWithValue(fixedNow),
+        ],
         child: const MaterialApp(home: Scaffold(body: CalendarScreen())),
       ),
     );
     await tester.pumpAndSettle();
 
-    final monthLabel = '${now.year}年${now.month}月';
+    final monthLabel = '${fixedNow.year}年${fixedNow.month}月';
     expect(find.text(monthLabel), findsOneWidget);
     expect(find.text('今月の割合'), findsOneWidget);
     expect(find.text('7日間の傾向'), findsOneWidget);
@@ -55,22 +64,24 @@ void main() {
     // 前の月に移動すると見出しが変わる
     await tester.tap(find.byIcon(Icons.chevron_left));
     await tester.pumpAndSettle();
-    final prevMonth = DateTime(now.year, now.month - 1, 1);
+    final prevMonth = DateTime(fixedNow.year, fixedNow.month - 1, 1);
     expect(find.text('${prevMonth.year}年${prevMonth.month}月'), findsOneWidget);
 
     await flushPendingTimers(tester);
   });
 
   testWidgets('日付セルをタップするとTrack画面のその日付に遷移する', (tester) async {
-    final now = DateTime.now();
-    final targetDay = DateTime(now.year, now.month, 5);
+    final targetDay = DateTime(fixedNow.year, fixedNow.month, 5);
     await db.recordsDao.createRecord(
       timestamp: DateTime(targetDay.year, targetDay.month, targetDay.day, 9),
       value: 1,
     );
 
     final container = ProviderContainer(
-      overrides: [appDatabaseProvider.overrideWithValue(db)],
+      overrides: [
+        appDatabaseProvider.overrideWithValue(db),
+        nowProvider.overrideWithValue(fixedNow),
+      ],
     );
     addTearDown(container.dispose);
 

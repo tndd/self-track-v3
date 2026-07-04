@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../domain/daily_score.dart';
 import '../theme.dart';
 
 /// mock/calendar.html 案1「そのまま」に準拠した月グリッド。
@@ -109,7 +110,7 @@ class _DayCell extends StatelessWidget {
                 : CircleAvatar(
                     radius: 15,
                     backgroundColor:
-                        ConditionLevel.fromDbValue(score.round().clamp(-2, 2)).color,
+                        ConditionLevel.fromDbValue(roundDailyScore(score)).color,
                     child: Text(
                       '$day',
                       style: const TextStyle(

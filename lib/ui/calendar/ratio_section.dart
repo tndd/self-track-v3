@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../domain/daily_score.dart';
 import '../section_chip.dart';
 import '../theme.dart';
 
@@ -22,7 +23,7 @@ class RatioSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final counts = {for (final level in ConditionLevel.values) level: 0};
     for (final score in scores) {
-      final level = ConditionLevel.fromDbValue(score.round().clamp(-2, 2));
+      final level = ConditionLevel.fromDbValue(roundDailyScore(score));
       counts[level] = (counts[level] ?? 0) + 1;
     }
     final total = scores.length;

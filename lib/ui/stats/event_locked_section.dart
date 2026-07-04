@@ -3,20 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
-import '../../domain/models.dart';
-import '../../domain/stats/event_locked.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/stats_providers.dart';
 
 /// plan.md M6「タグを1つ選ぶ → イベントロック平均グラフ」。
+/// アーカイブ済みタグも選択候補に含める（design.md §5.4: 過去の記録は
+/// 統計にも引き続き利用できる）。計算はproviderにメモ化されている。
 class EventLockedSection extends ConsumerWidget {
-  const EventLockedSection({super.key, required this.records});
-
-  final List<RecordWithTags> records;
+  const EventLockedSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final activeTags = ref.watch(activeTagsProvider).value ?? const <Tag>[];
+    final tags = ref.watch(allTagsProvider).value ?? const <Tag>[];
     final selectedId = ref.watch(selectedEventTagIdProvider);
 
     return Padding(
@@ -34,24 +32,26 @@ class EventLockedSection extends ConsumerWidget {
             style: TextStyle(fontSize: 11, color: Colors.grey),
           ),
           const SizedBox(height: 8),
-          if (activeTags.isEmpty)
+          if (tags.isEmpty)
             const Text('タグがまだありません。', style: TextStyle(fontSize: 12, color: Colors.grey))
           else ...[
             Wrap(
               spacing: 6,
               runSpacing: 6,
               children: [
-                for (final tag in activeTags)
+                for (final tag in tags)
                   ChoiceChip(
                     label: Text(tag.name),
                     selected: tag.id == selectedId,
-                    onSelected: (_) =>
-                        ref.read(selectedEventTagIdProvider.notifier).state = tag.id,
+                    // 選択中チップの再タップで選択解除できるようにする。
+                    onSelected: (selected) => ref
+                        .read(selectedEventTagIdProvider.notifier)
+                        .state = selected ? tag.id : null,
                   ),
               ],
             ),
             const SizedBox(height: 12),
-            if (selectedId != null) _EventLockedChart(records: records, tagId: selectedId),
+            if (selectedId != null) _EventLockedChart(tagId: selectedId),
           ],
         ],
       ),
@@ -59,26 +59,27 @@ class EventLockedSection extends ConsumerWidget {
   }
 }
 
-class _EventLockedChart extends StatelessWidget {
-  const _EventLockedChart({required this.records, required this.tagId});
+class _EventLockedChart extends ConsumerWidget {
+  const _EventLockedChart({required this.tagId});
 
-  final List<RecordWithTags> records;
   final String tagId;
 
   @override
-  Widget build(BuildContext context) {
-    final points = computeEventLockedAverage(records: records, tagId: tagId, now: DateTime.now());
+  Widget build(BuildContext context, WidgetRef ref) {
+    final points = ref.watch(eventLockedPointsProvider(tagId));
     if (points.isEmpty) {
       return const Text('このタグの記録がまだありません。', style: TextStyle(fontSize: 12, color: Colors.grey));
     }
 
     final spots = [for (final p in points) FlSpot(p.offsetHours.toDouble(), p.averageValue)];
+    final occurrenceCount =
+        points.map((p) => p.sampleCount).reduce((a, b) => a > b ? a : b);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '発生回数: ${points.first.sampleCount}回',
+          '発生回数: $occurrenceCount回',
           style: const TextStyle(fontSize: 11, color: Colors.grey),
         ),
         const SizedBox(height: 8),

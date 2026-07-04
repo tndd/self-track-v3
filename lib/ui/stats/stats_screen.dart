@@ -13,7 +13,7 @@ class StatsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recordsAsync = ref.watch(allRecordsProvider);
-    final activeTagsAsync = ref.watch(activeTagsProvider);
+    final tagsAsync = ref.watch(allTagsProvider);
 
     return recordsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -23,18 +23,18 @@ class StatsScreen extends ConsumerWidget {
           return const Center(child: Text('記録がまだありません。Trackで記録を作成してみましょう。'));
         }
 
-        return activeTagsAsync.when(
+        return tagsAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, stack) => Center(child: Text('読み込みエラー: $error')),
-          data: (activeTags) {
+          data: (_) {
             return ListView(
               padding: const EdgeInsets.only(bottom: 24),
-              children: [
-                RecentTrendChart(records: records),
-                const Divider(height: 24, indent: 16, endIndent: 16),
-                EventLockedSection(records: records),
-                const Divider(height: 24, indent: 16, endIndent: 16),
-                TagPairList(records: records, tags: activeTags),
+              children: const [
+                RecentTrendChart(),
+                Divider(height: 24, indent: 16, endIndent: 16),
+                EventLockedSection(),
+                Divider(height: 24, indent: 16, endIndent: 16),
+                TagPairList(),
               ],
             );
           },

@@ -144,4 +144,58 @@ void main() {
 
     await flushPendingTimers(tester);
   });
+
+  testWidgets('アーカイブ済みタグも統計の対象に残り続ける（design.md §5.4）', (tester) async {
+    final coffeeId = await db.tagsDao.createTag(name: 'コーヒー', group: '行動');
+    await db.tagsDao.createTag(name: '頭痛', group: '症状');
+    await db.recordsDao.createRecord(
+      timestamp: DateTime.now(),
+      value: 1,
+      tagIds: [coffeeId],
+    );
+
+    await db.tagsDao.archiveTag(coffeeId);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MaterialApp(home: Scaffold(body: StatsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // アーカイブしてもイベントロック平均の選択チップと
+    // 行動×症状ペアの両方に残る（旧不具合: 統計から消えていた）。
+    expect(find.widgetWithText(ChoiceChip, 'コーヒー'), findsOneWidget);
+    expect(find.text('コーヒー → 頭痛'), findsOneWidget);
+
+    await flushPendingTimers(tester);
+  });
+
+  testWidgets('イベントロック平均のタグは再タップで選択解除できる', (tester) async {
+    final tagId = await db.tagsDao.createTag(name: 'コーヒー', group: '行動');
+    await db.recordsDao.createRecord(
+      timestamp: DateTime.now(),
+      value: 1,
+      tagIds: [tagId],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MaterialApp(home: Scaffold(body: StatsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('コーヒー'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('発生回数'), findsOneWidget);
+
+    await tester.tap(find.text('コーヒー'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('発生回数'), findsNothing);
+
+    await flushPendingTimers(tester);
+  });
 }
