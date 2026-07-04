@@ -51,12 +51,15 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
   }) {
     final now = DateTime.now();
     return transaction(() async {
+      // plan.md M1: isDirtyは書き込み時にDAO内で自動設定する。更新も
+      // 未同期扱いに戻さないと、将来のクラウド同期で更新漏れが発生する。
       await (update(records)..where((r) => r.id.equals(id))).write(
         RecordsCompanion(
           timestamp: Value(timestamp),
           comment: Value(comment),
           value: Value(value),
           updatedAt: Value(now),
+          isDirty: const Value(true),
         ),
       );
       if (tagIds != null) {
@@ -79,14 +82,11 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
 
   /// [from, to) の半開区間でレコードをタグ付きで新しい順に取得するストリーム。
   Stream<List<RecordWithTags>> watchByDateRange(DateTime from, DateTime to) {
-    final query = select(records)
-      ..where(
-        (r) =>
-            r.timestamp.isBiggerOrEqualValue(from) &
-            r.timestamp.isSmallerThanValue(to),
-      )
-      ..orderBy([(r) => OrderingTerm.desc(r.timestamp)]);
-    return query.watch().asyncMap(_attachTags);
+    return _watchWithTags(
+      where: records.timestamp.isBiggerOrEqualValue(from) &
+          records.timestamp.isSmallerThanValue(to),
+      ascending: false,
+    );
   }
 
   /// [from]以降の全レコードをタグ付きで新しい順に取得するストリーム。
@@ -94,10 +94,10 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
   /// 開始日を渡して使う。上限を設けないことで、日付をまたいで作成された
   /// 新規レコードも即座に反映される。
   Stream<List<RecordWithTags>> watchSince(DateTime from) {
-    final query = select(records)
-      ..where((r) => r.timestamp.isBiggerOrEqualValue(from))
-      ..orderBy([(r) => OrderingTerm.desc(r.timestamp)]);
-    return query.watch().asyncMap(_attachTags);
+    return _watchWithTags(
+      where: records.timestamp.isBiggerOrEqualValue(from),
+      ascending: false,
+    );
   }
 
   /// 最古レコードのtimestamp（レコードが無ければnull）。
@@ -110,45 +110,69 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
 
   /// 統計計算などで使う、全レコードを時刻昇順で取得するストリーム。
   Stream<List<RecordWithTags>> watchAll() {
-    final query = select(records)
-      ..orderBy([(r) => OrderingTerm.asc(r.timestamp)]);
-    return query.watch().asyncMap(_attachTags);
+    return _watchWithTags(ascending: true);
   }
 
-  /// Composerの「最近使ったタグ」算出に使う、直近レコードを新しい順で取得するストリーム。
-  Stream<List<RecordWithTags>> watchRecent({int limit = 30}) {
-    final query = select(records)
-      ..orderBy([(r) => OrderingTerm.desc(r.timestamp)])
-      ..limit(limit);
-    return query.watch().asyncMap(_attachTags);
+  /// records×record_tags×tagsを1本のjoin監視クエリで発行し、行をレコード
+  /// 単位にグループ化して返す。
+  ///
+  /// 単一のjoinクエリにすることで、(1) レコード1件ごとにタグを問い合わせる
+  /// N+1クエリを避け、(2) クエリにtagsテーブルが含まれるためタグ名・色の
+  /// 変更やアーカイブ切り替えもDriftの変更監視対象となり、タイムライン等へ
+  /// 即座に反映される。
+  Stream<List<RecordWithTags>> _watchWithTags({
+    Expression<bool>? where,
+    required bool ascending,
+  }) {
+    final query = select(records).join([
+      leftOuterJoin(recordTags, recordTags.recordId.equalsExp(records.id)),
+      leftOuterJoin(tags, tags.id.equalsExp(recordTags.tagId)),
+    ]);
+    if (where != null) {
+      query.where(where);
+    }
+    query.orderBy([
+      ascending
+          ? OrderingTerm.asc(records.timestamp)
+          : OrderingTerm.desc(records.timestamp),
+      // 同時刻レコードでも同一レコードの行が連続するよう安定化する。
+      OrderingTerm.asc(records.id),
+      OrderingTerm.asc(tags.name),
+    ]);
+    return query.watch().map(_groupJoinedRows);
   }
 
-  Future<List<RecordWithTags>> _attachTags(List<RecordEntry> rows) async {
+  List<RecordWithTags> _groupJoinedRows(List<TypedResult> rows) {
     final result = <RecordWithTags>[];
+    final indexById = <String, int>{};
     for (final row in rows) {
-      final tagRows = await (select(recordTags).join([
-        innerJoin(tags, tags.id.equalsExp(recordTags.tagId)),
-      ])
-            ..where(recordTags.recordId.equals(row.id)))
-          .get();
-      final tagRefs = tagRows
-          .map((r) => r.readTable(tags))
-          .map((t) => TagRef(
-                id: t.id,
-                name: t.name,
-                group: t.group,
-                colorIndex: t.colorIndex,
-              ))
-          .toList();
-      result.add(
-        RecordWithTags(
-          id: row.id,
-          timestamp: row.timestamp,
-          comment: row.comment,
-          value: row.value,
-          tags: tagRefs,
-        ),
-      );
+      final record = row.readTable(records);
+      var index = indexById[record.id];
+      if (index == null) {
+        index = result.length;
+        indexById[record.id] = index;
+        result.add(
+          RecordWithTags(
+            id: record.id,
+            timestamp: record.timestamp,
+            comment: record.comment,
+            value: record.value,
+            tags: [],
+          ),
+        );
+      }
+      final tag = row.readTableOrNull(tags);
+      if (tag != null) {
+        result[index].tags.add(
+              TagRef(
+                id: tag.id,
+                name: tag.name,
+                group: tag.group,
+                colorIndex: tag.colorIndex,
+                isArchived: tag.isArchived,
+              ),
+            );
+      }
     }
     return result;
   }

@@ -5,6 +5,7 @@ class TagRef {
     required this.name,
     required this.group,
     this.colorIndex,
+    this.isArchived = false,
   });
 
   final String id;
@@ -13,6 +14,10 @@ class TagRef {
 
   /// チップ配色パレットのindex。nullならタグ名ハッシュで自動決定する。
   final int? colorIndex;
+
+  /// アーカイブ済みかどうか。「最近使ったタグ」の候補除外や、編集時の
+  /// 選択チップ表示など、下流のUIがアーカイブ判定できるよう伝搬する。
+  final bool isArchived;
 }
 
 /// タイムライン表示や統計計算で使う、タグ付きレコード。

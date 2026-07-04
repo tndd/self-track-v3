@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:self_track_v3/data/database.dart';
@@ -130,7 +131,7 @@ void main() {
     expect(orphanTagLinks, isEmpty);
   });
 
-  test('タグをアーカイブしても過去レコードのタグ紐付けは維持される', () async {
+  test('タグをアーカイブしても過去レコードのタグ紐付けは維持され、isArchivedが伝搬される', () async {
     final tagId = await db.tagsDao.createTag(name: 'ビタミンD', group: 'サプリ');
     await db.recordsDao.createRecord(
       timestamp: DateTime(2026, 6, 29, 12),
@@ -142,6 +143,50 @@ void main() {
 
     final all = await db.recordsDao.watchAll().first;
     expect(all.single.tags.single.name, 'ビタミンD');
+    expect(all.single.tags.single.isArchived, isTrue);
+  });
+
+  test('タグ名・色の変更が既存の監視ストリームに再発行される（joinクエリの変更監視）', () async {
+    final tagId = await db.tagsDao.createTag(name: '頭痛', group: '症状');
+    await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 29, 12),
+      value: -1,
+      tagIds: [tagId],
+    );
+
+    final stream = db.recordsDao.watchAll();
+    // タグ名の変更（tagsテーブルのみの更新）でもストリームが再発行され、
+    // 新しいタグ名が届くこと。
+    final futureRenamed = stream
+        .firstWhere((records) => records.single.tags.single.name == '偏頭痛');
+
+    await db.tagsDao.updateTag(id: tagId, name: '偏頭痛', group: '症状', colorIndex: 3);
+
+    final renamed = await futureRenamed.timeout(const Duration(seconds: 5));
+    expect(renamed.single.tags.single.name, '偏頭痛');
+    expect(renamed.single.tags.single.colorIndex, 3);
+  });
+
+  test('updateRecordはisDirtyをtrueに戻す（同期用フラグの自動設定）', () async {
+    final recordId = await db.recordsDao.createRecord(
+      timestamp: DateTime(2026, 6, 29, 12),
+      value: 0,
+    );
+    // 同期済みを模してフラグを落とす。
+    await (db.update(db.records)..where((r) => r.id.equals(recordId))).write(
+      const RecordsCompanion(isDirty: Value(false)),
+    );
+
+    await db.recordsDao.updateRecord(
+      id: recordId,
+      timestamp: DateTime(2026, 6, 29, 12),
+      value: 1,
+    );
+
+    final row = await (db.select(db.records)
+          ..where((r) => r.id.equals(recordId)))
+        .getSingle();
+    expect(row.isDirty, isTrue);
   });
 
   test('updateRecordでtagIdsを渡すとタグ紐付けが丸ごと入れ替わる', () async {

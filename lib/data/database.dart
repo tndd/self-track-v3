@@ -19,7 +19,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.withExecutor(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -27,6 +27,10 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             // v2: タグにチップ配色のパレットindex（null=自動）を追加。
             await m.addColumn(tags, tags.colorIndex);
+          }
+          if (from < 3) {
+            // v3: records.timestampのインデックス（plan.md M1）。
+            await m.createIndex(idxRecordsTimestamp);
           }
         },
         beforeOpen: (details) async {

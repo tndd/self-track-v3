@@ -5,9 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:self_track_v3/data/database.dart';
 import 'package:sqlite3/sqlite3.dart' as sqlite;
 
-/// schema v1（colorIndex列なし）のDBファイルをv2のAppDatabaseで開き、
-/// onUpgradeマイグレーションで既存データを保持したままcolorIndex列が
-/// 追加されることを検証する。実機の本番DB・開発用DBのアップグレード経路に相当。
+/// schema v1（colorIndex列なし）のDBファイルを最新のAppDatabaseで開き、
+/// onUpgradeマイグレーションで既存データを保持したままcolorIndex列（v2）と
+/// records.timestampインデックス（v3）が追加されることを検証する。
+/// 実機の本番DB・開発用DBのアップグレード経路に相当。
 void main() {
   late Directory tempDir;
 
@@ -19,7 +20,7 @@ void main() {
     await tempDir.delete(recursive: true);
   });
 
-  test('v1のDBを開くとcolorIndex列が追加され既存タグ・レコードが保持される', () async {
+  test('v1のDBを開くとcolorIndex列とtimestampインデックスが追加され既存タグ・レコードが保持される', () async {
     final path = '${tempDir.path}/v1.sqlite';
 
     // schema v1相当のDDL（lib/data/tables.dartのv1定義から生成される構造）。
@@ -57,13 +58,21 @@ void main() {
         "INSERT INTO record_tags (record_id, tag_id) VALUES ('r1', 't1')");
     raw.dispose();
 
-    // v2のAppDatabaseで開く → onUpgradeが走る。
+    // 最新のAppDatabaseで開く → onUpgradeが走る。
     final db = AppDatabase.withExecutor(NativeDatabase(File(path)));
     addTearDown(db.close);
 
     final tags = await db.tagsDao.watchAll().first;
     expect(tags.single.name, '頭痛');
     expect(tags.single.colorIndex, isNull); // 追加列はnullで初期化される
+
+    // v3: records.timestampのインデックスが作成されている。
+    final indexRows = await db
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'index' AND name = 'idx_records_timestamp'",
+        )
+        .get();
+    expect(indexRows, hasLength(1));
 
     // 追加された列に書き込めること。
     await db.tagsDao

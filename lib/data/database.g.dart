@@ -1049,6 +1049,10 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RecordsTable records = $RecordsTable(this);
   late final $TagsTable tags = $TagsTable(this);
   late final $RecordTagsTable recordTags = $RecordTagsTable(this);
+  late final Index idxRecordsTimestamp = Index(
+    'idx_records_timestamp',
+    'CREATE INDEX idx_records_timestamp ON records (timestamp)',
+  );
   late final RecordsDao recordsDao = RecordsDao(this as AppDatabase);
   late final TagsDao tagsDao = TagsDao(this as AppDatabase);
   @override
@@ -1059,6 +1063,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     records,
     tags,
     recordTags,
+    idxRecordsTimestamp,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([

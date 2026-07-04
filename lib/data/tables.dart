@@ -4,6 +4,10 @@ import 'package:drift/drift.dart';
 /// `value` は -2〜2 のDB値。UI表示（1〜5）への変換は ui/theme.dart で行う。
 /// Dartの言語機能「レコード（タプル）」との混同を避けるため、
 /// 生成される行データクラス名は明示的に `RecordEntry` にする。
+///
+/// plan.md M1: 期間クエリ・時刻順ソートが全画面の基盤になるため、
+/// timestampにインデックスを張る（schema v3で追加）。
+@TableIndex(name: 'idx_records_timestamp', columns: {#timestamp})
 @DataClassName('RecordEntry')
 class Records extends Table {
   TextColumn get id => text()();
