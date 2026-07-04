@@ -65,7 +65,8 @@ void main() {
     await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
     await tester.pumpAndSettle();
 
-    final all = await db.recordsDao.watchAll().first;
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
     expect(all, hasLength(1));
     expect(all.single.value, 0);
     expect(all.single.comment, isNull);
@@ -93,7 +94,8 @@ void main() {
     await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
     await tester.pumpAndSettle();
 
-    final all = await db.recordsDao.watchAll().first;
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
     expect(all, hasLength(1));
     expect(all.single.value, -1);
     expect(all.single.comment, '朝から頭が重い');
@@ -248,7 +250,8 @@ void main() {
     await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
     await tester.pumpAndSettle();
 
-    final all = await db.recordsDao.watchAll().first;
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
     expect(all.single.tags.single.name, '頭痛');
 
     await flushPendingTimers(tester);
@@ -271,7 +274,8 @@ void main() {
     await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
     await tester.pumpAndSettle();
 
-    final all = await db.recordsDao.watchAll().first;
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
     expect(all, hasLength(1));
     expect(all.single.comment, '編集後コメント');
 
@@ -293,8 +297,103 @@ void main() {
     await tester.tap(find.text('削除').last);
     await tester.pumpAndSettle();
 
-    final all = await db.recordsDao.watchAll().first;
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
     expect(all, isEmpty);
+
+    await flushPendingTimers(tester);
+  });
+
+  testWidgets('編集中にscrimをタップすると編集が破棄され、次の送信は新規作成になる', (tester) async {
+    await db.recordsDao.createRecord(
+      timestamp: DateTime.now(),
+      value: -1,
+      comment: '元コメント',
+    );
+    await pumpTrackScreen(tester);
+
+    await tester.longPress(find.text('元コメント'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('編集'));
+    await tester.pumpAndSettle();
+    expect(find.text('記録を編集中'), findsOneWidget);
+
+    await tester.tap(find.byKey(const ValueKey('composer-scrim')));
+    await tester.pumpAndSettle();
+    expect(find.text('記録を編集中'), findsNothing);
+
+    // 編集状態が残っていると、新規のつもりの送信が元レコードを
+    // 黙って上書きしてしまう（旧不具合）。新規作成になることを確認する。
+    await tester.enterText(find.byType(TextField), '新しいコメント');
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
+    await tester.pumpAndSettle();
+
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
+    expect(all, hasLength(2));
+    expect(
+      all.map((r) => r.comment),
+      containsAll(['元コメント', '新しいコメント']),
+    );
+
+    await flushPendingTimers(tester);
+  });
+
+  testWidgets('送信ボタンの素早い二度押しでもレコードは1件だけ作成される', (tester) async {
+    await pumpTrackScreen(tester);
+
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.add));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '一度だけ');
+
+    // 送信ボタンの二度押し。実行中は_submittingガード、送信完了後は
+    // 「畳んだ状態かつ入力が空の送信を無視する」ガードで弾かれる。
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
+    await tester.pumpAndSettle();
+
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
+    expect(all, hasLength(1));
+    expect(all.single.comment, '一度だけ');
+
+    await flushPendingTimers(tester);
+  });
+
+  testWidgets('アーカイブ済みタグ付きレコードを編集すると、チップ表示され取り外せる', (tester) async {
+    final tagId = await db.tagsDao.createTag(name: '旧薬', group: '薬');
+    await db.recordsDao.createRecord(
+      timestamp: DateTime.now(),
+      value: 0,
+      comment: '服用メモ',
+      tagIds: [tagId],
+    );
+    await db.tagsDao.archiveTag(tagId);
+    await pumpTrackScreen(tester);
+
+    await tester.longPress(find.text('服用メモ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('編集'));
+    await tester.pumpAndSettle();
+
+    // アーカイブ済みタグは選択候補には出ないが、編集対象レコードに付いて
+    // いる場合は選択中チップとして見え、取り外せる必要がある（旧不具合:
+    // 見えないまま保存で再付与され、外す手段が無かった）。
+    final chip = find.widgetWithText(InputChip, '旧薬');
+    expect(chip, findsOneWidget);
+
+    await tester.tap(
+      find.descendant(of: chip, matching: find.byType(Icon)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.widgetWithText(InputChip, '旧薬'), findsNothing);
+
+    await tester.tap(find.widgetWithIcon(IconButton, Icons.arrow_upward));
+    await tester.pumpAndSettle();
+
+    final all =
+        (await tester.runAsync(() => db.recordsDao.watchAll().first))!;
+    expect(all.single.tags, isEmpty);
 
     await flushPendingTimers(tester);
   });

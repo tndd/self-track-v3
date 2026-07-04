@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
 
+import '../../domain/dates.dart';
 import '../../domain/models.dart';
 import '../../providers/composer_provider.dart';
 import '../../providers/database_providers.dart';
@@ -30,6 +31,10 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
   List<TimelineEntry> _entries = const [];
   DateTime? _pendingJumpDay;
   bool _positionsSyncScheduled = false;
+
+  /// 送信処理の実行中フラグ。送信ボタンの素早い二度押しで
+  /// レコードが重複作成されるのを防ぐ。
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -74,8 +79,7 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
     DateTime? day;
     for (var i = topIndex; i >= 0 && day == null; i--) {
       day = switch (_entries[i]) {
-        TimelineRecordEntry(:final record) => DateTime(
-            record.timestamp.year, record.timestamp.month, record.timestamp.day),
+        TimelineRecordEntry(:final record) => startOfDay(record.timestamp),
         TimelineDateHeaderEntry(:final day) => day,
         TimelineLoadingEntry() => null,
       };
@@ -99,7 +103,7 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
     var next = notifier.state.subtract(const Duration(days: 14));
     final oldest = ref.read(oldestRecordTimestampProvider).value;
     if (oldest != null) {
-      final oldestDay = DateTime(oldest.year, oldest.month, oldest.day);
+      final oldestDay = startOfDay(oldest);
       if (next.isBefore(oldestDay)) next = oldestDay;
       // ウィンドウ内に1件も無い場合は最古日まで一気に広げる。
       if ((ref.read(timelineProvider).value ?? const []).isEmpty) {
@@ -123,32 +127,53 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
   }
 
   Future<void> _submit() async {
-    final composer = ref.read(composerProvider);
-    final dao = ref.read(recordsDaoProvider);
-    final comment = _commentController.text.trim();
-    final dbValue = conditionUiToDb(composer.conditionUiValue);
-    final tagIds = composer.selectedTagIds.toList();
+    if (_submitting) return;
+    _submitting = true;
+    try {
+      final composer = ref.read(composerProvider);
+      final dao = ref.read(recordsDaoProvider);
+      final comment = _commentController.text.trim();
+      final dbValue = conditionUiToDb(composer.conditionUiValue);
+      final tagIds = composer.selectedTagIds.toList();
 
-    if (composer.isEditing) {
-      await dao.updateRecord(
-        id: composer.editingRecordId!,
-        timestamp: composer.editingTimestamp!,
-        comment: comment.isEmpty ? null : comment,
-        value: dbValue,
-        tagIds: tagIds,
-      );
-    } else {
-      await dao.createRecord(
-        timestamp: DateTime.now(),
-        comment: comment.isEmpty ? null : comment,
-        value: dbValue,
-        tagIds: tagIds,
-      );
+      // パネルが畳まれていて入力も何も無い送信は無視する。送信ボタンは
+      // 常時表示のため、誤タップや送信完了直後の二度目のタップが
+      // 「体調0・内容なし」のレコードを量産するのを防ぐ。
+      // （体調のみを記録したい場合は+でパネルを開いてから送信する。）
+      if (!composer.isExpanded && comment.isEmpty && tagIds.isEmpty) {
+        return;
+      }
+
+      if (composer.isEditing) {
+        await dao.updateRecord(
+          id: composer.editingRecordId!,
+          timestamp: composer.editingTimestamp!,
+          comment: comment.isEmpty ? null : comment,
+          value: dbValue,
+          tagIds: tagIds,
+        );
+      } else {
+        await dao.createRecord(
+          timestamp: DateTime.now(),
+          comment: comment.isEmpty ? null : comment,
+          value: dbValue,
+          tagIds: tagIds,
+        );
+      }
+
+      ref.read(composerProvider.notifier).reset();
+      _commentController.clear();
+      if (mounted) FocusScope.of(context).unfocus();
+    } catch (_) {
+      // 例外時は入力内容（Composer状態・コメント）を保持したままにする。
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('記録の保存に失敗しました。もう一度お試しください。')),
+        );
+      }
+    } finally {
+      _submitting = false;
     }
-
-    ref.read(composerProvider.notifier).reset();
-    _commentController.clear();
-    if (mounted) FocusScope.of(context).unfocus();
   }
 
   void _startEdit(RecordWithTags record) {
@@ -181,7 +206,13 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
       ),
     );
     if (confirmed == true) {
+      final wasEditingThisRecord =
+          ref.read(composerProvider).editingRecordId == record.id;
       await ref.read(recordsDaoProvider).deleteRecord(record.id);
+      // 削除したレコードを編集中だった場合は編集状態を破棄する。放置すると
+      // 次の送信が存在しないレコードへの更新（外部キー違反）になる。
+      ref.read(composerProvider.notifier).onRecordDeleted(record.id);
+      if (wasEditingThisRecord) _commentController.clear();
     }
   }
 
@@ -215,7 +246,11 @@ class _TrackScreenState extends ConsumerState<TrackScreen> {
   }
 
   void _collapseComposer() {
+    // collapse()は編集中なら編集を破棄する（composer_provider.dart参照）。
+    // その場合はコメント欄も編集前の内容ごとクリアする。
+    final wasEditing = ref.read(composerProvider).isEditing;
     ref.read(composerProvider.notifier).collapse();
+    if (wasEditing) _commentController.clear();
     FocusScope.of(context).unfocus();
   }
 
@@ -335,9 +370,9 @@ class TrackDateSubtitle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final day = ref.watch(visibleTimelineDayProvider) ?? _today();
-    final label =
-        '${day.month}月${day.day}日 ${kWeekdayLabels[day.weekday - 1]}曜';
+    final day = ref.watch(visibleTimelineDayProvider) ?? startOfDay(DateTime.now());
+    // タイムライン内の日付区切りと同一の書式（重なった際に一致させる）。
+    final label = formatTimelineDayLabel(day);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 6, 24, 0),
@@ -351,11 +386,6 @@ class TrackDateSubtitle extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  DateTime _today() {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day);
   }
 
   Future<void> _pickDate(BuildContext context, WidgetRef ref, DateTime current) async {

@@ -1,6 +1,13 @@
+import '../../domain/dates.dart';
 import '../../domain/models.dart';
 
 const kWeekdayLabels = ['月', '火', '水', '木', '金', '土', '日'];
+
+/// タイムラインの日付見出し・ヘッダ直下の日付バーで共通に使う日付ラベル。
+/// 両者はスクロールで重なった際に表示がピタリと一致する必要があるため、
+/// 書式は必ずこの関数で一元化する。
+String formatTimelineDayLabel(DateTime day) =>
+    '${day.month}月${day.day}日 ${kWeekdayLabels[day.weekday - 1]}曜';
 
 /// チャット式タイムライン（reverse:true のリスト）の1行を表すモデル。
 /// index 0 が画面最下部（最新）、末尾が最上部（最古側）になる。
@@ -19,8 +26,7 @@ class TimelineDateHeaderEntry extends TimelineEntry {
 
   final DateTime day;
 
-  String get label =>
-      '${day.month}月${day.day}日 ${kWeekdayLabels[day.weekday - 1]}曜';
+  String get label => formatTimelineDayLabel(day);
 }
 
 /// さらに過去を読み込み中であることを示す行（リスト最上部に表示）。
@@ -39,11 +45,7 @@ List<TimelineEntry> buildTimelineEntries(
   final entries = <TimelineEntry>[];
   DateTime? currentDay;
   for (final record in descRecords) {
-    final day = DateTime(
-      record.timestamp.year,
-      record.timestamp.month,
-      record.timestamp.day,
-    );
+    final day = startOfDay(record.timestamp);
     if (currentDay != null && day != currentDay) {
       entries.add(TimelineDateHeaderEntry(currentDay));
     }

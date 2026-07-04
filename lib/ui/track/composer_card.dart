@@ -28,12 +28,15 @@ class ComposerCard extends ConsumerWidget {
     final composer = ref.watch(composerProvider);
     final notifier = ref.read(composerProvider.notifier);
     final activeTags = ref.watch(activeTagsProvider).value ?? const <Tag>[];
-    final recentTags = ref.watch(recentTagsProvider).value ?? const <TagRef>[];
+    final recentTags = ref.watch(recentTagsProvider);
     final level = ConditionLevel.fromUiValue(composer.conditionUiValue);
 
+    // 選択済みチップは全タグ（アーカイブ済み含む）から解決する。編集対象の
+    // レコードにアーカイブ済みタグが付いている場合でも、チップとして表示され
+    // ユーザーが取り外せるようにするため（選択候補一覧には出さない）。
+    final allTags = ref.watch(allTagsProvider).value ?? const <Tag>[];
     final selectedTags = [
-      for (final id in composer.selectedTagIds)
-        ...activeTags.where((t) => t.id == id),
+      for (final id in composer.selectedTagIds) ...allTags.where((t) => t.id == id),
     ];
 
     return Container(
@@ -245,7 +248,7 @@ class FullTagSelectorDialog extends ConsumerWidget {
     final composer = ref.watch(composerProvider);
     final notifier = ref.read(composerProvider.notifier);
     final activeTags = ref.watch(activeTagsProvider).value ?? const <Tag>[];
-    final recentTags = ref.watch(recentTagsProvider).value ?? const <TagRef>[];
+    final recentTags = ref.watch(recentTagsProvider);
 
     return Dialog(
       insetPadding: const EdgeInsets.all(14),

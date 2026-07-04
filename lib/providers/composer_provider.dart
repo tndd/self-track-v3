@@ -60,11 +60,26 @@ class ComposerNotifier extends Notifier<ComposerState> {
     state = state.copyWith(isTagZoneOpen: !state.isTagZoneOpen);
   }
 
-  /// パネル外タップ（scrim）で閉じる。選択済みタグ・体調・編集中の
-  /// レコードは保持し、パネルの展開状態だけを畳む。
+  /// パネル外タップ（scrim）で閉じる。
+  ///
+  /// 新規作成の下書き（選択済みタグ・体調）は保持してパネルだけを畳むが、
+  /// 編集中だった場合は編集を破棄して初期状態に戻す。編集状態を残したまま
+  /// 畳むと「編集中」バナーが見えないまま送信ボタンが押せてしまい、
+  /// 新規作成のつもりの送信が過去レコードを黙って上書きするため。
   void collapse() {
-    if (state.isExpanded || state.isTagZoneOpen) {
+    if (state.isEditing) {
+      state = const ComposerState();
+    } else if (state.isExpanded || state.isTagZoneOpen) {
       state = state.copyWith(isExpanded: false, isTagZoneOpen: false);
+    }
+  }
+
+  /// 編集中のレコードが削除された時に呼ぶ。該当レコードを編集中で
+  /// なければ何もしない。宙に浮いた編集状態からの送信は、存在しない
+  /// レコードへのタグ紐付けINSERT（外部キー違反）になるため。
+  void onRecordDeleted(String recordId) {
+    if (state.editingRecordId == recordId) {
+      state = const ComposerState();
     }
   }
 
