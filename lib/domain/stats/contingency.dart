@@ -1,4 +1,10 @@
+import '../dates.dart';
 import '../models.dart';
+
+/// design.md・draft.mdの「基本的には'症状'がyになる想定」に基づき、
+/// group名がこの値のタグをsymptom、それ以外をactionとして扱う。
+/// 統計のy/x振り分けはdomain層の仕様であり、UI側はこの定数を参照する。
+const kSymptomGroupName = '症状';
 
 /// タグ×日の共起を表す2×2分割表。
 ///
@@ -33,45 +39,69 @@ class ContingencyTable {
   int get symptomDayCount => a + c;
 }
 
+/// [records]を1パス走査した「観測日の集合」と「タグごとの発生日の集合」。
+/// 全action×symptomペアの分割表構築で共有し、ペアごとの全レコード再走査
+/// （O(ペア数×レコード数)）を避けるための前計算。
+class DayTagSets {
+  const DayTagSets({required this.observedDays, required this.daysByTag});
+
+  /// レコードが1件以上存在する日の集合（分割表の母集団）。
+  final Set<DateTime> observedDays;
+
+  /// タグID -> そのタグが付いたレコードが存在する日の集合。
+  final Map<String, Set<DateTime>> daysByTag;
+}
+
+/// [records]全体を1回だけ走査して[DayTagSets]を構築する。
+DayTagSets buildDayTagSets(List<RecordWithTags> records) {
+  final observedDays = <DateTime>{};
+  final daysByTag = <String, Set<DateTime>>{};
+
+  for (final record in records) {
+    final day = startOfDay(record.timestamp);
+    observedDays.add(day);
+    for (final tag in record.tags) {
+      daysByTag.putIfAbsent(tag.id, () => {}).add(day);
+    }
+  }
+
+  return DayTagSets(observedDays: observedDays, daysByTag: daysByTag);
+}
+
+/// 前計算済みの[sets]から、[actionTagId]×[symptomTagId]の2×2分割表を構築する。
+/// 観測日（レコードが1件以上ある日）を母集団とする。
+ContingencyTable buildContingencyFromSets({
+  required DayTagSets sets,
+  required String actionTagId,
+  required String symptomTagId,
+}) {
+  final actionDays = sets.daysByTag[actionTagId] ?? const <DateTime>{};
+  final symptomDays = sets.daysByTag[symptomTagId] ?? const <DateTime>{};
+
+  final a = actionDays.intersection(symptomDays).length;
+  final b = actionDays.length - a;
+  final c = symptomDays.length - a;
+  final d = sets.observedDays.length - a - b - c;
+
+  return ContingencyTable(a: a, b: b, c: c, d: d);
+}
+
 /// [records]全体から、[actionTagId]・[symptomTagId]それぞれのタグが
 /// 付いた日の集合を求め、観測日（レコードが1件以上ある日）を母集団として
 /// 2×2分割表を構築する。
+///
+/// 複数ペアをまとめて計算する場合は[buildDayTagSets]を1回だけ実行して
+/// [buildContingencyFromSets]を使うこと。
 ContingencyTable buildDayContingencyTable({
   required List<RecordWithTags> records,
   required String actionTagId,
   required String symptomTagId,
 }) {
-  final observedDays = <DateTime>{};
-  final actionDays = <DateTime>{};
-  final symptomDays = <DateTime>{};
-
-  for (final record in records) {
-    final day = DateTime(record.timestamp.year, record.timestamp.month, record.timestamp.day);
-    observedDays.add(day);
-    if (record.tags.any((t) => t.id == actionTagId)) {
-      actionDays.add(day);
-    }
-    if (record.tags.any((t) => t.id == symptomTagId)) {
-      symptomDays.add(day);
-    }
-  }
-
-  var a = 0, b = 0, c = 0, d = 0;
-  for (final day in observedDays) {
-    final hasAction = actionDays.contains(day);
-    final hasSymptom = symptomDays.contains(day);
-    if (hasAction && hasSymptom) {
-      a++;
-    } else if (hasAction) {
-      b++;
-    } else if (hasSymptom) {
-      c++;
-    } else {
-      d++;
-    }
-  }
-
-  return ContingencyTable(a: a, b: b, c: c, d: d);
+  return buildContingencyFromSets(
+    sets: buildDayTagSets(records),
+    actionTagId: actionTagId,
+    symptomTagId: symptomTagId,
+  );
 }
 
 /// design.md §4.3・plan.md §6.4: オッズ比。分割表にゼロのセルがある場合は

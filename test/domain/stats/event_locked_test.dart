@@ -26,9 +26,26 @@ void main() {
       expect(result, isEmpty);
     });
 
-    test('-12h〜+12hの25点を1時間刻みで返す', () {
+    test('発生から12時間以上経過していれば-12h〜+12hの25点を1時間刻みで返す', () {
       final records = [
         _record(DateTime(2026, 6, 29, 10), 0, tagIds: ['coffee']),
+      ];
+
+      final result = computeEventLockedAverage(
+        records: records,
+        tagId: 'coffee',
+        now: DateTime(2026, 6, 29, 22),
+      );
+
+      expect(result, hasLength(25));
+      expect(result.first.offsetHours, -12);
+      expect(result.last.offsetHours, 12);
+      expect(result.every((p) => p.sampleCount == 1), isTrue);
+    });
+
+    test('発生直後は未来側のオフセットを含めない（未観測データを捏造しない）', () {
+      final records = [
+        _record(DateTime(2026, 6, 29, 10), 2, tagIds: ['coffee']),
       ];
 
       final result = computeEventLockedAverage(
@@ -37,10 +54,29 @@ void main() {
         now: DateTime(2026, 6, 29, 10),
       );
 
-      expect(result, hasLength(25));
+      // now=発生時刻なので +1h〜+12h はまだ観測されておらず出力されない。
+      expect(result, hasLength(13));
       expect(result.first.offsetHours, -12);
-      expect(result.last.offsetHours, 12);
-      expect(result.every((p) => p.sampleCount == 1), isTrue);
+      expect(result.last.offsetHours, 0);
+    });
+
+    test('直近発生の未来分だけを除いて点ごとにサンプル数が変わる', () {
+      final records = [
+        _record(DateTime(2026, 6, 28, 10), 2, tagIds: ['coffee']),
+        _record(DateTime(2026, 6, 29, 10), -2, tagIds: ['coffee']),
+      ];
+
+      final result = computeEventLockedAverage(
+        records: records,
+        tagId: 'coffee',
+        now: DateTime(2026, 6, 29, 10),
+      );
+
+      final atZero = result.firstWhere((p) => p.offsetHours == 0);
+      final atPlusOne = result.firstWhere((p) => p.offsetHours == 1);
+      expect(atZero.sampleCount, 2);
+      // +1h は6/29発生分がまだ未来のため、6/28発生分のみ。
+      expect(atPlusOne.sampleCount, 1);
     });
 
     test('発生時刻(offset=0)では発生時のvalueがそのまま平均になる', () {

@@ -26,6 +26,10 @@ class ConditionPoint {
 /// - 隣り合うログA・Bの間隔が12時間を超える場合、A+12時間の位置に仮想ポイントを挿入する。
 /// - 最後のログから[now]までの間隔が12時間を超える場合、最後のログ+12時間の位置と
 ///   [now]自身の2点に value=0 の仮想ポイントを挿入する。
+/// - 間隔が12時間以内の場合も、[now]時点の減衰途中の値（最後のログ値から
+///   +12時間で0になる直線上の値）を仮想ポイントとして追加し、系列が常に
+///   [now]で終端するようにする。これにより「未来の時間帯」が最終ログ値の
+///   まま延長されて日次スコア等が過大評価されることを防ぐ。
 ///
 /// 仮想ポイントはメモリ上の計算・描画のためだけに存在し、DBには保存しない。
 List<ConditionPoint> buildConditionSeries(
@@ -50,11 +54,17 @@ List<ConditionPoint> buildConditionSeries(
   }
 
   final last = records.last;
-  if (now.difference(last.timestamp) > decayThreshold) {
+  final gap = now.difference(last.timestamp);
+  if (gap > decayThreshold) {
     points.add(
       ConditionPoint(timestamp: last.timestamp.add(decayThreshold), value: 0, isVirtual: true),
     );
     points.add(ConditionPoint(timestamp: now, value: 0, isVirtual: true));
+  } else if (gap > Duration.zero) {
+    final remaining = 1 - gap.inMicroseconds / decayThreshold.inMicroseconds;
+    points.add(
+      ConditionPoint(timestamp: now, value: last.value * remaining, isVirtual: true),
+    );
   }
 
   return points;
@@ -65,20 +75,30 @@ List<ConditionPoint> buildConditionSeries(
 ///
 /// - 系列の最初の点より前の時刻: データが無いため既定値0とする（design.md §2.2）。
 /// - 系列の最後の点より後の時刻: 最後の値がそのまま続くとみなす。
+///   （buildConditionSeriesは系列をnowで終端させるため、通常この分岐は
+///   now以降＝未来の時刻を問い合わせた場合にのみ通る。未来のサンプリングを
+///   避けたい呼び出し側は事前に系列終端と比較すること。）
+///
+/// 系列は昇順ソート済みのため二分探索でO(log N)。
 double valueAtTime(List<ConditionPoint> series, DateTime t) {
-  ConditionPoint? before;
-  ConditionPoint? after;
-  for (final p in series) {
-    if (!p.timestamp.isAfter(t)) {
-      before = p;
+  if (series.isEmpty) return 0;
+  if (t.isBefore(series.first.timestamp)) return 0;
+
+  // timestamp <= t を満たす最後のindexを二分探索で求める。
+  var lo = 0;
+  var hi = series.length - 1;
+  while (lo < hi) {
+    final mid = (lo + hi + 1) >> 1;
+    if (series[mid].timestamp.isAfter(t)) {
+      hi = mid - 1;
     } else {
-      after = p;
-      break;
+      lo = mid;
     }
   }
 
-  if (before == null) return 0;
-  if (after == null) return before.value;
+  final before = series[lo];
+  if (lo == series.length - 1) return before.value;
+  final after = series[lo + 1];
   if (!after.timestamp.isAfter(before.timestamp)) return before.value;
 
   final spanMicros = after.timestamp.difference(before.timestamp).inMicroseconds;

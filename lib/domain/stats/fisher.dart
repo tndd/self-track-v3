@@ -50,10 +50,15 @@ double _logHypergeometricP(int a, int rowA, int rowB, int colA, int n) {
       _logFactorial(n);
 }
 
+/// log(0!)=0, log(1!)=0 を初期値とする累積テーブル。必要になった分だけ
+/// 伸ばしてキャッシュする。毎回O(n)のループで再計算すると、全ペア×全候補表
+/// の検定でnが数百の場合に無視できないコストになるため。
+final List<double> _logFactorialCache = <double>[0.0, 0.0];
+
 double _logFactorial(int n) {
-  var result = 0.0;
-  for (var i = 2; i <= n; i++) {
-    result += math.log(i);
+  while (_logFactorialCache.length <= n) {
+    _logFactorialCache
+        .add(_logFactorialCache.last + math.log(_logFactorialCache.length));
   }
-  return result;
+  return _logFactorialCache[n];
 }
