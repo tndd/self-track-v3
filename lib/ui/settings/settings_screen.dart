@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../providers/calendar_providers.dart';
+import '../../providers/composer_provider.dart';
 import '../../providers/database_providers.dart';
+import '../../providers/stats_providers.dart';
+import '../../providers/track_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -48,6 +52,17 @@ class SettingsScreen extends ConsumerWidget {
     if (secondConfirm != true) return;
 
     await ref.read(appDatabaseProvider).deleteAllData();
+
+    // DBの行を消しただけでは、削除済みタグを選択中のComposerや選択中の
+    // 統計タグなどのUI状態が残る。そのまま送信すると存在しないタグへの
+    // 紐付けINSERT（外部キー違反）でクラッシュするため、全削除と同時に
+    // 各画面のUI状態も初期化する。
+    ref.invalidate(composerProvider);
+    ref.invalidate(selectedEventTagIdProvider);
+    ref.invalidate(selectedDateProvider);
+    ref.invalidate(timelineWindowStartProvider);
+    ref.invalidate(visibleTimelineDayProvider);
+    ref.invalidate(currentMonthProvider);
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(

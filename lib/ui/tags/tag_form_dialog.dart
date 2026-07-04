@@ -20,6 +20,7 @@ class TagFormResult {
 Future<TagFormResult?> showTagFormDialog(
   BuildContext context, {
   required List<String> existingGroups,
+  Set<String> existingNames = const {},
   String? initialName,
   String? initialGroup,
   int? initialColorIndex,
@@ -28,6 +29,7 @@ Future<TagFormResult?> showTagFormDialog(
     context: context,
     builder: (context) => _TagFormDialog(
       existingGroups: existingGroups,
+      existingNames: existingNames,
       initialName: initialName,
       initialGroup: initialGroup,
       initialColorIndex: initialColorIndex,
@@ -38,12 +40,20 @@ Future<TagFormResult?> showTagFormDialog(
 class _TagFormDialog extends StatefulWidget {
   const _TagFormDialog({
     required this.existingGroups,
+    required this.existingNames,
     this.initialName,
     this.initialGroup,
     this.initialColorIndex,
   });
 
   final List<String> existingGroups;
+
+  /// 既存タグ名（編集時は自分自身を除く）。tags.nameのUNIQUE制約違反を
+  /// 保存前に検出するために使う。アーカイブ済みタグは一覧上で折り畳まれて
+  /// 見えないことがあるため、ここで弾かないと「保存したのに何も起きない」
+  /// ように見える無言の失敗になる。
+  final Set<String> existingNames;
+
   final String? initialName;
   final String? initialGroup;
   final int? initialColorIndex;
@@ -99,8 +109,14 @@ class _TagFormDialogState extends State<_TagFormDialog> {
               controller: _nameController,
               autofocus: true,
               decoration: const InputDecoration(labelText: '名前'),
-              validator: (value) =>
-                  (value == null || value.trim().isEmpty) ? '名前を入力してください' : null,
+              validator: (value) {
+                final name = value?.trim() ?? '';
+                if (name.isEmpty) return '名前を入力してください';
+                if (widget.existingNames.contains(name)) {
+                  return '同じ名前のタグが既に存在します（アーカイブ済みを含む）';
+                }
+                return null;
+              },
               // 自動配色プレビューを名前の変化に追従させる。
               onChanged: (_) => setState(() {}),
             ),

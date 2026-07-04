@@ -114,4 +114,40 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(milliseconds: 100));
   });
+
+  testWidgets('アーカイブ済みを含む既存タグと同名では保存できずエラーを表示する', (tester) async {
+    final db = AppDatabase.withExecutor(NativeDatabase.memory());
+    addTearDown(db.close);
+
+    // アーカイブ済みの同名タグは一覧上で折り畳まれて見えないため、
+    // 事前バリデーションが無いと「保存したのに何も起きない」無言の失敗になる。
+    final tagId = await db.tagsDao.createTag(name: '頭痛', group: '症状');
+    await db.tagsDao.archiveTag(tagId);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [appDatabaseProvider.overrideWithValue(db)],
+        child: const MaterialApp(home: TagsScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byType(FloatingActionButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.widgetWithText(TextFormField, '名前'), '頭痛');
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'グループ（例: 薬, サプリ, 症状）'),
+      '症状',
+    );
+    await tester.tap(find.text('保存'));
+    await tester.pumpAndSettle();
+
+    // ダイアログは閉じず、バリデーションエラーが表示される。
+    expect(find.text('同じ名前のタグが既に存在します（アーカイブ済みを含む）'), findsOneWidget);
+    final tags = await db.select(db.tags).get();
+    expect(tags, hasLength(1));
+
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 100));
+  });
 }

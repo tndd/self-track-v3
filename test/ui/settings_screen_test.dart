@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:self_track_v3/data/database.dart';
+import 'package:self_track_v3/providers/composer_provider.dart';
 import 'package:self_track_v3/providers/database_providers.dart';
+import 'package:self_track_v3/providers/stats_providers.dart';
 import 'package:self_track_v3/ui/settings/settings_screen.dart';
 
 void main() {
@@ -76,6 +78,43 @@ void main() {
     expect(records, isEmpty);
     expect(tags, isEmpty);
     expect(find.text('全てのデータを削除しました。'), findsOneWidget);
+
+    await flushPendingTimers(tester);
+  });
+
+  testWidgets('全削除でComposerの選択タグや統計の選択状態もリセットされる', (tester) async {
+    final tagId = await db.tagsDao.createTag(name: '頭痛', group: '症状');
+    await db.recordsDao.createRecord(
+        timestamp: DateTime.now(), value: 1, tagIds: [tagId]);
+
+    final container = ProviderContainer(
+      overrides: [appDatabaseProvider.overrideWithValue(db)],
+    );
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: Scaffold(body: SettingsScreen())),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 削除対象になるタグをComposer・統計で選択済みの状態にしておく。
+    // リセットされないと、削除後の送信が存在しないタグへの紐付けINSERT
+    // （外部キー違反）でクラッシュする（旧不具合）。
+    container.read(composerProvider.notifier).toggleTag(tagId);
+    container.read(selectedEventTagIdProvider.notifier).state = tagId;
+
+    await tester.tap(find.text('データを全て削除'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('次へ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('全て削除する'));
+    await tester.pumpAndSettle();
+
+    expect(container.read(composerProvider).selectedTagIds, isEmpty);
+    expect(container.read(selectedEventTagIdProvider), isNull);
 
     await flushPendingTimers(tester);
   });

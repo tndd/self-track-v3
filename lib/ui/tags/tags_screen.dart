@@ -11,13 +11,23 @@ class TagsScreen extends ConsumerWidget {
 
   Future<void> _addTag(BuildContext context, WidgetRef ref, List<Tag> allTags) async {
     final groups = allTags.map((t) => t.group).toSet().toList()..sort();
-    final result = await showTagFormDialog(context, existingGroups: groups);
+    final result = await showTagFormDialog(
+      context,
+      existingGroups: groups,
+      existingNames: allTags.map((t) => t.name).toSet(),
+    );
     if (result == null) return;
-    await ref.read(tagsDaoProvider).createTag(
-          name: result.name,
-          group: result.group,
-          colorIndex: result.colorIndex,
-        );
+    try {
+      await ref.read(tagsDaoProvider).createTag(
+            name: result.name,
+            group: result.group,
+            colorIndex: result.colorIndex,
+          );
+    } catch (_) {
+      // フォームで重複チェック済みだが、ダイアログ表示中の並行変更等で
+      // UNIQUE制約違反になった場合の保険。無言で失敗させない。
+      if (context.mounted) _showSaveFailed(context);
+    }
   }
 
   Future<void> _editTag(BuildContext context, WidgetRef ref, Tag tag, List<Tag> allTags) async {
@@ -25,17 +35,32 @@ class TagsScreen extends ConsumerWidget {
     final result = await showTagFormDialog(
       context,
       existingGroups: groups,
+      // 自分自身の名前は変更なし保存を許すため除外する。
+      existingNames: allTags
+          .where((t) => t.id != tag.id)
+          .map((t) => t.name)
+          .toSet(),
       initialName: tag.name,
       initialGroup: tag.group,
       initialColorIndex: tag.colorIndex,
     );
     if (result == null) return;
-    await ref.read(tagsDaoProvider).updateTag(
-          id: tag.id,
-          name: result.name,
-          group: result.group,
-          colorIndex: result.colorIndex,
-        );
+    try {
+      await ref.read(tagsDaoProvider).updateTag(
+            id: tag.id,
+            name: result.name,
+            group: result.group,
+            colorIndex: result.colorIndex,
+          );
+    } catch (_) {
+      if (context.mounted) _showSaveFailed(context);
+    }
+  }
+
+  void _showSaveFailed(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('タグを保存できませんでした。同じ名前のタグが既に存在する可能性があります。')),
+    );
   }
 
   @override
