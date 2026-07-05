@@ -28,8 +28,11 @@ class RatioSection extends StatelessWidget {
     }
     final total = scores.length;
 
+    // 前月比はUI値スケール(1〜5)同士の変化率(%)で表示する（mockの「↗ +11%」）。
     final hasComparison = monthAverage != null && prevAverage != null;
-    final diff = hasComparison ? monthAverage! - prevAverage! : null;
+    final diffPercent = hasComparison
+        ? ((monthAverage! + 3) - (prevAverage! + 3)) / (prevAverage! + 3) * 100
+        : null;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -38,8 +41,11 @@ class RatioSection extends StatelessWidget {
         children: [
           const SectionChip(label: '今月の割合'),
           const SizedBox(height: 10),
+          // mock準拠の横並び: ドーナツ(90px固定) / 凡例(固定幅・高さ90pxに等間隔配置)
+          // / 前月比(残り幅の中央寄せ)。凡例をExpandedにすると中央に大きな
+          // 空白ができてmockと乖離するため、幅は固定にする。
           Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
                 width: 90,
@@ -59,12 +65,13 @@ class RatioSection extends StatelessWidget {
                                     PieChartSectionData(
                                       value: (counts[level] ?? 0).toDouble(),
                                       color: level.color,
-                                      radius: 14,
+                                      radius: 12.5,
                                       showTitle: false,
                                     ),
                               ],
-                              sectionsSpace: 2,
-                              centerSpaceRadius: 24,
+                              // mockのドーナツはセグメント間に隙間が無い。
+                              sectionsSpace: 0,
+                              centerSpaceRadius: 28,
                             ),
                           ),
                           Column(
@@ -91,7 +98,10 @@ class RatioSection extends StatelessWidget {
                       ),
               ),
               const SizedBox(width: 10),
-              Expanded(
+              // 凡例: mockの.legendColA（幅固定・ドーナツと同じ高さに等間隔配置）。
+              SizedBox(
+                width: 74,
+                height: 90,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -120,40 +130,54 @@ class RatioSection extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 74,
-                child: Column(
-                  children: [
-                    const Text('前月比', style: TextStyle(fontSize: 9, color: Colors.grey)),
-                    const SizedBox(height: 6),
-                    if (diff != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: diff >= 0 ? const Color(0xFFE7F8EE) : const Color(0xFFFDECEC),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          '${diff >= 0 ? '↗ +' : '↘ '}${diff.toStringAsFixed(1)}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            color: diff >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
-                          ),
-                        ),
-                      )
-                    else
-                      const Text('-', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    if (prevAverage != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          '先月 ${(prevAverage! + 3).toStringAsFixed(1)}',
-                          style: const TextStyle(fontSize: 8.5, color: Color(0xFFAAB2C0)),
+              // 前月比: mockの.momSlot（残り幅を使い、縦横とも中央に配置）。
+              Expanded(
+                child: SizedBox(
+                  height: 90,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        '前月比',
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF98A2B3),
                         ),
                       ),
-                  ],
+                      const SizedBox(height: 6),
+                      if (diffPercent != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: diffPercent >= 0
+                                ? const Color(0xFFE7F8EE)
+                                : const Color(0xFFFDECEC),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
+                          child: Text(
+                            '${diffPercent >= 0 ? '↗ +' : '↘ '}${diffPercent.round()}%',
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w800,
+                              color: diffPercent >= 0
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFFDC2626),
+                            ),
+                          ),
+                        )
+                      else
+                        const Text('-', style: TextStyle(fontSize: 15, color: Colors.grey)),
+                      if (prevAverage != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            '先月 ${(prevAverage! + 3).toStringAsFixed(1)}',
+                            style: const TextStyle(fontSize: 8.5, color: Color(0xFFAAB2C0)),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ],
