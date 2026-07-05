@@ -3,6 +3,20 @@ import 'package:flutter/material.dart';
 
 import '../../domain/daily_score.dart';
 import '../section_chip.dart';
+import '../theme.dart';
+
+/// mockのpivotGradLine/pivotGradFillに対応する縦グラデーションの色と位置。
+/// チャートのY値域(-2〜2)の下端=最悪(赤)〜上端=最高(青)で、基準線(0=普通)の
+/// 50%を境に暖色と寒色が切り替わる。
+const _pivotLineColors = [
+  Color(0xFFEF4444),
+  Color(0xFFF97316),
+  Color(0xFFF97316),
+  Color(0xFF22C55E),
+  Color(0xFF22C55E),
+  Color(0xFF3B82F6),
+];
+const _pivotStops = [0.0, 0.3, 0.5, 0.5, 0.7, 1.0];
 
 /// mock/calendar.html の「7日間の傾向」セクション：直近7日の日次平均の
 /// スパークラインと、前週（7〜13日前）平均との比較（plan.md M5）。
@@ -92,6 +106,16 @@ class TrendSection extends StatelessWidget {
                             color: Colors.grey.shade400,
                             strokeWidth: 1,
                             dashArray: const [3, 3],
+                            label: HorizontalLineLabel(
+                              show: true,
+                              alignment: Alignment.topLeft,
+                              padding: const EdgeInsets.only(left: 2, bottom: 2),
+                              style: const TextStyle(
+                                fontSize: 7,
+                                color: Color(0xFF9AA2B0),
+                              ),
+                              labelResolver: (_) => '普通',
+                            ),
                           ),
                         ],
                       ),
@@ -99,10 +123,57 @@ class TrendSection extends StatelessWidget {
                         LineChartBarData(
                           spots: spots,
                           isCurved: true,
-                          color: const Color(0xFF3B82F6),
+                          // mockのpivotGradLine準拠: 基準線(普通=0)を境に
+                          // 下は赤→橙、上は緑→青の縦グラデーションで塗る。
+                          gradient: const LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: _pivotLineColors,
+                            stops: _pivotStops,
+                          ),
                           barWidth: 2.5,
-                          dotData: const FlDotData(show: true),
-                          belowBarData: BarAreaData(show: true, color: const Color(0x333B82F6)),
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, bar, index) =>
+                                FlDotCirclePainter(
+                              radius: 3,
+                              // 各点はその日の体調レベルの色で塗る（mock準拠）。
+                              color: ConditionLevel.fromDbValue(
+                                roundDailyScore(spot.y),
+                              ).color,
+                              strokeWidth: 0,
+                            ),
+                          ),
+                          // mockのpivotGradFill準拠: 線と基準線の間を
+                          // 同系色・低不透明度のグラデーションで塗る。
+                          belowBarData: BarAreaData(
+                            show: true,
+                            applyCutOffY: true,
+                            cutOffY: 0,
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                for (final c in _pivotLineColors)
+                                  c.withValues(alpha: 0.24),
+                              ],
+                              stops: _pivotStops,
+                            ),
+                          ),
+                          aboveBarData: BarAreaData(
+                            show: true,
+                            applyCutOffY: true,
+                            cutOffY: 0,
+                            gradient: LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                for (final c in _pivotLineColors)
+                                  c.withValues(alpha: 0.24),
+                              ],
+                              stops: _pivotStops,
+                            ),
+                          ),
                         ),
                       ],
                     ),

@@ -48,27 +48,41 @@ class MonthGrid extends StatelessWidget {
                         color: label == '日'
                             ? const Color(0xFFEF4444)
                             : label == '土'
-                                ? const Color(0xFF3B82F6)
-                                : Colors.grey.shade500,
+                            ? const Color(0xFF3B82F6)
+                            : Colors.grey.shade500,
                       ),
                     ),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
+          // 各週の行は与えられた高さを等分して埋める（mockのgrid-auto-rows:1fr）。
+          // 最終行以外は下罫線で区切る（mockの.calGrid .cell）。
           for (var row = 0; row < rowCount; row++)
-            Row(
-              children: [
-                for (var col = 0; col < 7; col++)
-                  _DayCell(
-                    day: row * 7 + col - firstWeekdayColumn + 1,
-                    daysInMonth: daysInMonth,
-                    month: month,
-                    scores: scores,
-                    onDayTap: onDayTap,
-                  ),
-              ],
+            Expanded(
+              child: Container(
+                decoration: row < rowCount - 1
+                    ? const BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Color(0x12111827)),
+                        ),
+                      )
+                    : null,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var col = 0; col < 7; col++)
+                      _DayCell(
+                        day: row * 7 + col - firstWeekdayColumn + 1,
+                        daysInMonth: daysInMonth,
+                        month: month,
+                        scores: scores,
+                        onDayTap: onDayTap,
+                      ),
+                  ],
+                ),
+              ),
             ),
         ],
       ),
@@ -94,7 +108,7 @@ class _DayCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (day < 1 || day > daysInMonth) {
-      return const Expanded(child: SizedBox(height: 48));
+      return const Expanded(child: SizedBox.shrink());
     }
 
     final score = scores[day];
@@ -103,20 +117,20 @@ class _DayCell extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: () => onDayTap(date),
-        child: SizedBox(
-          height: 48,
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (score == null)
-                  // 記録の無い日も円と同じ高さを確保し、日付ラベルの
-                  // 縦位置を記録のある日と揃える。
-                  const SizedBox(width: 30, height: 30)
-                else
-                  Builder(builder: (context) {
-                    final level =
-                        ConditionLevel.fromDbValue(roundDailyScore(score));
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (score == null)
+                // 記録の無い日も円と同じ高さを確保し、日付ラベルの
+                // 縦位置を記録のある日と揃える。
+                const SizedBox(width: 30, height: 30)
+              else
+                Builder(
+                  builder: (context) {
+                    final level = ConditionLevel.fromDbValue(
+                      roundDailyScore(score),
+                    );
                     return CircleAvatar(
                       radius: 15,
                       backgroundColor: level.color,
@@ -135,18 +149,18 @@ class _DayCell extends StatelessWidget {
                         ),
                       ),
                     );
-                  }),
-                const SizedBox(height: 2),
-                Text(
-                  '$day',
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey.shade400,
-                  ),
+                  },
                 ),
-              ],
-            ),
+              const SizedBox(height: 2),
+              Text(
+                '$day',
+                style: TextStyle(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey.shade400,
+                ),
+              ),
+            ],
           ),
         ),
       ),

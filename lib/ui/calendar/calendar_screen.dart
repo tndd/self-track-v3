@@ -56,31 +56,51 @@ class CalendarScreen extends ConsumerWidget {
             scoreFor(todayStart.subtract(Duration(days: i))),
         ].whereType<double>());
 
-        return ListView(
-          padding: const EdgeInsets.only(bottom: 24),
-          children: [
-            _MonthNavRow(month: month),
-            MonthGrid(
-              month: month,
-              scores: monthScores,
-              onDayTap: (day) {
-                requestDateJump(ref, day);
-                ref.read(currentDestinationProvider.notifier).state = AppDestination.track;
-              },
-            ),
-            const SizedBox(height: 16),
-            RatioSection(
-              scores: definedScores,
-              monthAverage: monthAverage,
-              prevAverage: prevAverage,
-            ),
-            const SizedBox(height: 16),
-            TrendSection(
-              days: last7Days,
-              scores: last7Scores,
-              prevWeekAverage: prevWeekAverage,
-            ),
-          ],
+        // mock/calendar.html の .calendarZone{flex:0 0 70%} に準拠して、
+        // カレンダー（月ナビ＋グリッド）が画面高の70%を占める縦長レイアウトにする。
+        return LayoutBuilder(
+          builder: (context, constraints) => ListView(
+            padding: const EdgeInsets.only(bottom: 24),
+            children: [
+              SizedBox(
+                height: constraints.maxHeight * 0.70,
+                child: Column(
+                  children: [
+                    _MonthNavRow(month: month),
+                    Expanded(
+                      child: MonthGrid(
+                        month: month,
+                        scores: monthScores,
+                        onDayTap: (day) {
+                          requestDateJump(ref, day);
+                          ref.read(currentDestinationProvider.notifier).state =
+                              AppDestination.track;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // カレンダーゾーンと下部セクションの区切り線（mockの.calendarZone:after）
+              Container(
+                height: 1,
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                color: const Color(0xFFEEF1F6),
+              ),
+              const SizedBox(height: 16),
+              RatioSection(
+                scores: definedScores,
+                monthAverage: monthAverage,
+                prevAverage: prevAverage,
+              ),
+              const SizedBox(height: 16),
+              TrendSection(
+                days: last7Days,
+                scores: last7Scores,
+                prevWeekAverage: prevWeekAverage,
+              ),
+            ],
+          ),
         );
       },
     );
