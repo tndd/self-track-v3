@@ -41,18 +41,21 @@ class RatioSection extends StatelessWidget {
         children: [
           const SectionChip(label: '今月の割合'),
           const SizedBox(height: 10),
-          // mock準拠の横並び: ドーナツ(90px固定) / 凡例(固定幅・高さ90pxに等間隔配置)
+          // mock準拠の横並び: ドーナツ(110px固定) / 凡例(固定幅・ドーナツと同じ高さに等間隔配置)
           // / 前月比(残り幅の中央寄せ)。凡例をExpandedにすると中央に大きな
           // 空白ができてmockと乖離するため、幅は固定にする。
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 90,
-                height: 90,
+                width: 110,
+                height: 110,
                 child: total == 0
                     ? const Center(
-                        child: Text('データ無し', style: TextStyle(fontSize: 10, color: Colors.grey)),
+                        child: Text(
+                          'データ無し',
+                          style: TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
                       )
                     : Stack(
                         alignment: Alignment.center,
@@ -65,13 +68,13 @@ class RatioSection extends StatelessWidget {
                                     PieChartSectionData(
                                       value: (counts[level] ?? 0).toDouble(),
                                       color: level.color,
-                                      radius: 12.5,
+                                      radius: 15,
                                       showTitle: false,
                                     ),
                               ],
                               // mockのドーナツはセグメント間に隙間が無い。
                               sectionsSpace: 0,
-                              centerSpaceRadius: 28,
+                              centerSpaceRadius: 34,
                             ),
                           ),
                           Column(
@@ -83,14 +86,17 @@ class RatioSection extends StatelessWidget {
                                     ? (monthAverage! + 3).toStringAsFixed(1)
                                     : '-',
                                 style: const TextStyle(
-                                  fontSize: 19,
+                                  fontSize: 23,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                 ),
                               ),
                               const Text(
                                 '今月平均',
-                                style: TextStyle(fontSize: 9, color: Color(0xFFAAB2C0)),
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: Color(0xFFAAB2C0),
+                                ),
                               ),
                             ],
                           ),
@@ -100,8 +106,8 @@ class RatioSection extends StatelessWidget {
               const SizedBox(width: 10),
               // 凡例: mockの.legendColA（幅固定・ドーナツと同じ高さに等間隔配置）。
               SizedBox(
-                width: 74,
-                height: 90,
+                width: 92,
+                height: 110,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -110,20 +116,29 @@ class RatioSection extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(color: level.color, shape: BoxShape.circle),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: level.color,
+                              shape: BoxShape.circle,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '${counts[level] ?? 0}日',
-                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+                            style: const TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           if (total > 0)
                             Text(
                               '${(((counts[level] ?? 0) / total) * 100).round()}%',
-                              style: const TextStyle(fontSize: 8.5, color: Color(0xFF9AA2B0)),
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                color: Color(0xFF9AA2B0),
+                              ),
                             ),
                         ],
                       ),
@@ -133,14 +148,14 @@ class RatioSection extends StatelessWidget {
               // 前月比: mockの.momSlot（残り幅を使い、縦横とも中央に配置）。
               Expanded(
                 child: SizedBox(
-                  height: 90,
+                  height: 110,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
                         '前月比',
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF98A2B3),
                         ),
@@ -148,7 +163,10 @@ class RatioSection extends StatelessWidget {
                       const SizedBox(height: 6),
                       if (diffPercent != null)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 15,
+                            vertical: 7,
+                          ),
                           decoration: BoxDecoration(
                             color: diffPercent >= 0
                                 ? const Color(0xFFE7F8EE)
@@ -158,7 +176,7 @@ class RatioSection extends StatelessWidget {
                           child: Text(
                             '${diffPercent >= 0 ? '↗ +' : '↘ '}${diffPercent.round()}%',
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 17,
                               fontWeight: FontWeight.w800,
                               color: diffPercent >= 0
                                   ? const Color(0xFF16A34A)
@@ -167,13 +185,19 @@ class RatioSection extends StatelessWidget {
                           ),
                         )
                       else
-                        const Text('-', style: TextStyle(fontSize: 15, color: Colors.grey)),
+                        const Text(
+                          '-',
+                          style: TextStyle(fontSize: 17, color: Colors.grey),
+                        ),
                       if (prevAverage != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             '先月 ${(prevAverage! + 3).toStringAsFixed(1)}',
-                            style: const TextStyle(fontSize: 8.5, color: Color(0xFFAAB2C0)),
+                            style: const TextStyle(
+                              fontSize: 10.5,
+                              color: Color(0xFFAAB2C0),
+                            ),
                           ),
                         ),
                     ],
@@ -187,4 +211,3 @@ class RatioSection extends StatelessWidget {
     );
   }
 }
-
