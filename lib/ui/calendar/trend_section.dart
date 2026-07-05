@@ -16,7 +16,29 @@ const _pivotLineColors = [
   Color(0xFF22C55E),
   Color(0xFF3B82F6),
 ];
-const _pivotStops = [0.0, 0.3, 0.5, 0.5, 0.7, 1.0];
+
+/// Y軸レンジ内での基準線(0=普通)の相対位置pivot(0=下端,1=上端)に応じた
+/// グラデーションの色と位置を返す。レンジが動的に変わっても、暖色と寒色の
+/// 切り替わりが常に基準線の高さに一致するようにする。
+(List<Color>, List<double>) _pivotGradient(double pivot) {
+  // レンジ全体が基準線より上(全て普通以上)なら寒色のみ、下なら暖色のみ。
+  if (pivot <= 0) {
+    return (
+      const [Color(0xFF22C55E), Color(0xFF22C55E), Color(0xFF3B82F6)],
+      const [0.0, 0.4, 1.0],
+    );
+  }
+  if (pivot >= 1) {
+    return (
+      const [Color(0xFFEF4444), Color(0xFFF97316), Color(0xFFF97316)],
+      const [0.0, 0.6, 1.0],
+    );
+  }
+  return (
+    _pivotLineColors,
+    [0.0, pivot * 0.6, pivot, pivot, pivot + (1 - pivot) * 0.4, 1.0],
+  );
+}
 
 /// mock/calendar.html の「7日間の傾向」セクション：直近7日の日次平均の
 /// スパークラインと、前週（7〜13日前）平均との比較（plan.md M5）。
@@ -46,6 +68,32 @@ class TrendSection extends StatelessWidget {
         if (scores[i] != null) FlSpot(i.toDouble(), scores[i]!),
     ];
 
+    // Y軸レンジをデータの実際の振れ幅に合わせて動的に決める。全レンジ
+    // (-2〜2)固定だと数値の小さな変動が潰れて見えるため、データの
+    // 最小〜最大に余白を付けた範囲へズームする。ただし極端に拡大して
+    // ノイズを誇張しないよう、最低でも1レベル分(1.0)の幅は確保する。
+    var minY = -2.0;
+    var maxY = 2.0;
+    if (spots.isNotEmpty) {
+      var lo = spots.map((s) => s.y).reduce((a, b) => a < b ? a : b);
+      var hi = spots.map((s) => s.y).reduce((a, b) => a > b ? a : b);
+      const minSpan = 1.0;
+      if (hi - lo < minSpan) {
+        final mid = (hi + lo) / 2;
+        lo = mid - minSpan / 2;
+        hi = mid + minSpan / 2;
+      }
+      // 上下に15%の余白を付け、スコアの定義域を少し超える所までで打ち切る。
+      final pad = (hi - lo) * 0.15;
+      minY = (lo - pad).clamp(-2.2, 2.2);
+      maxY = (hi + pad).clamp(-2.2, 2.2);
+    }
+    // 基準線(0=普通)のレンジ内での相対位置。グラデーションの境界に使う。
+    final pivot = (0 - minY) / (maxY - minY);
+    final (pivotColors, pivotStops) = _pivotGradient(pivot);
+    // 基準線がレンジ外に出た場合は破線自体を描かない。
+    final showBaseline = minY <= 0 && 0 <= maxY;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -59,16 +107,28 @@ class TrendSection extends StatelessWidget {
               Text(
                 // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
                 average != null ? (average + 3).toStringAsFixed(1) : '-',
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF475569)),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF475569),
+                ),
               ),
               const SizedBox(width: 10),
-              const Text('前週比', style: TextStyle(fontSize: 9, color: Colors.grey)),
+              const Text(
+                '前週比',
+                style: TextStyle(fontSize: 9, color: Colors.grey),
+              ),
               const SizedBox(width: 4),
               if (diff != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
+                  ),
                   decoration: BoxDecoration(
-                    color: diff >= 0 ? const Color(0xFFE7F8EE) : const Color(0xFFFDECEC),
+                    color: diff >= 0
+                        ? const Color(0xFFE7F8EE)
+                        : const Color(0xFFFDECEC),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -76,12 +136,17 @@ class TrendSection extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      color: diff >= 0 ? const Color(0xFF16A34A) : const Color(0xFFDC2626),
+                      color: diff >= 0
+                          ? const Color(0xFF16A34A)
+                          : const Color(0xFFDC2626),
                     ),
                   ),
                 )
               else
-                const Text('-', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                const Text(
+                  '-',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -89,34 +154,41 @@ class TrendSection extends StatelessWidget {
             height: 72,
             child: spots.length < 2
                 ? const Center(
-                    child: Text('データが不足しています', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    child: Text(
+                      'データが不足しています',
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
                   )
                 : LineChart(
                     LineChartData(
-                      minY: -2,
-                      maxY: 2,
+                      minY: minY,
+                      maxY: maxY,
                       gridData: const FlGridData(show: false),
                       titlesData: const FlTitlesData(show: false),
                       borderData: FlBorderData(show: false),
                       lineTouchData: const LineTouchData(enabled: false),
                       extraLinesData: ExtraLinesData(
                         horizontalLines: [
-                          HorizontalLine(
-                            y: 0,
-                            color: Colors.grey.shade400,
-                            strokeWidth: 1,
-                            dashArray: const [3, 3],
-                            label: HorizontalLineLabel(
-                              show: true,
-                              alignment: Alignment.topLeft,
-                              padding: const EdgeInsets.only(left: 2, bottom: 2),
-                              style: const TextStyle(
-                                fontSize: 7,
-                                color: Color(0xFF9AA2B0),
+                          if (showBaseline)
+                            HorizontalLine(
+                              y: 0,
+                              color: Colors.grey.shade400,
+                              strokeWidth: 1,
+                              dashArray: const [3, 3],
+                              label: HorizontalLineLabel(
+                                show: true,
+                                alignment: Alignment.topLeft,
+                                padding: const EdgeInsets.only(
+                                  left: 2,
+                                  bottom: 2,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 7,
+                                  color: Color(0xFF9AA2B0),
+                                ),
+                                labelResolver: (_) => '普通',
                               ),
-                              labelResolver: (_) => '普通',
                             ),
-                          ),
                         ],
                       ),
                       lineBarsData: [
@@ -125,24 +197,25 @@ class TrendSection extends StatelessWidget {
                           isCurved: true,
                           // mockのpivotGradLine準拠: 基準線(普通=0)を境に
                           // 下は赤→橙、上は緑→青の縦グラデーションで塗る。
-                          gradient: const LinearGradient(
+                          // 境界位置は動的レンジ内の基準線の高さに追従する。
+                          gradient: LinearGradient(
                             begin: Alignment.bottomCenter,
                             end: Alignment.topCenter,
-                            colors: _pivotLineColors,
-                            stops: _pivotStops,
+                            colors: pivotColors,
+                            stops: pivotStops,
                           ),
                           barWidth: 2.5,
                           dotData: FlDotData(
                             show: true,
                             getDotPainter: (spot, percent, bar, index) =>
                                 FlDotCirclePainter(
-                              radius: 3,
-                              // 各点はその日の体調レベルの色で塗る（mock準拠）。
-                              color: ConditionLevel.fromDbValue(
-                                roundDailyScore(spot.y),
-                              ).color,
-                              strokeWidth: 0,
-                            ),
+                                  radius: 3,
+                                  // 各点はその日の体調レベルの色で塗る（mock準拠）。
+                                  color: ConditionLevel.fromDbValue(
+                                    roundDailyScore(spot.y),
+                                  ).color,
+                                  strokeWidth: 0,
+                                ),
                           ),
                           // mockのpivotGradFill準拠: 線と基準線の間を
                           // 同系色・低不透明度のグラデーションで塗る。
@@ -154,10 +227,10 @@ class TrendSection extends StatelessWidget {
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
                               colors: [
-                                for (final c in _pivotLineColors)
+                                for (final c in pivotColors)
                                   c.withValues(alpha: 0.24),
                               ],
-                              stops: _pivotStops,
+                              stops: pivotStops,
                             ),
                           ),
                           aboveBarData: BarAreaData(
@@ -168,10 +241,10 @@ class TrendSection extends StatelessWidget {
                               begin: Alignment.bottomCenter,
                               end: Alignment.topCenter,
                               colors: [
-                                for (final c in _pivotLineColors)
+                                for (final c in pivotColors)
                                   c.withValues(alpha: 0.24),
                               ],
-                              stops: _pivotStops,
+                              stops: pivotStops,
                             ),
                           ),
                         ),

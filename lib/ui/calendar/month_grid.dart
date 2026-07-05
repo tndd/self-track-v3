@@ -125,7 +125,10 @@ class _DayCell extends StatelessWidget {
             const dayLabelSpace = 24.0;
             final diameter = (constraints.maxWidth * 0.8)
                 .clamp(16.0, 52.0)
-                .clamp(0.0, (constraints.maxHeight - dayLabelSpace).clamp(16.0, 52.0));
+                .clamp(
+                  0.0,
+                  (constraints.maxHeight - dayLabelSpace).clamp(16.0, 52.0),
+                );
             return Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
