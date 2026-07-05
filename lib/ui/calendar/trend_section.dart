@@ -43,7 +43,8 @@ class TrendSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
-                average?.toStringAsFixed(1) ?? '-',
+                // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
+                average != null ? (average + 3).toStringAsFixed(1) : '-',
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Color(0xFF475569)),
               ),
               const SizedBox(width: 10),

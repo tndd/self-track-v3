@@ -71,7 +71,10 @@ class RatioSection extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                monthAverage?.toStringAsFixed(1) ?? '-',
+                                // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
+                                monthAverage != null
+                                    ? (monthAverage! + 3).toStringAsFixed(1)
+                                    : '-',
                                 style: const TextStyle(
                                   fontSize: 19,
                                   fontWeight: FontWeight.w800,
@@ -146,7 +149,7 @@ class RatioSection extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 6),
                         child: Text(
-                          '先月 ${prevAverage!.toStringAsFixed(1)}',
+                          '先月 ${(prevAverage! + 3).toStringAsFixed(1)}',
                           style: const TextStyle(fontSize: 8.5, color: Color(0xFFAAB2C0)),
                         ),
                       ),

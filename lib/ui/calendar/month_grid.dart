@@ -106,37 +106,47 @@ class _DayCell extends StatelessWidget {
         child: SizedBox(
           height: 48,
           child: Center(
-            child: score == null
-                ? Text('$day', style: const TextStyle(fontSize: 12, color: Colors.grey))
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircleAvatar(
-                        radius: 15,
-                        backgroundColor:
-                            ConditionLevel.fromDbValue(roundDailyScore(score)).color,
-                        child: Text(
-                          // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
-                          (score + 3).toStringAsFixed(1),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '$day',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (score == null)
+                  // 記録の無い日も円と同じ高さを確保し、日付ラベルの
+                  // 縦位置を記録のある日と揃える。
+                  const SizedBox(width: 30, height: 30)
+                else
+                  Builder(builder: (context) {
+                    final level =
+                        ConditionLevel.fromDbValue(roundDailyScore(score));
+                    return CircleAvatar(
+                      radius: 15,
+                      backgroundColor: level.color,
+                      child: Text(
+                        // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
+                        (score + 3).toStringAsFixed(1),
                         style: TextStyle(
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey.shade400,
+                          // モック案2準拠: グレー(普通)の円だけ白文字だと
+                          // 視認性が落ちるため濃色文字にする。
+                          color: level == ConditionLevel.normal
+                              ? const Color(0xFF111827)
+                              : Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
                       ),
-                    ],
+                    );
+                  }),
+                const SizedBox(height: 2),
+                Text(
+                  '$day',
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.grey.shade400,
                   ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
