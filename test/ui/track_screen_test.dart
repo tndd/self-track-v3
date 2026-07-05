@@ -282,6 +282,27 @@ void main() {
     await flushPendingTimers(tester);
   });
 
+  testWidgets('アーカイブ済みタグ付きレコードを編集すると、そのタグがチップとして表示される', (tester) async {
+    final tagId = await db.tagsDao.createTag(name: '旧タグ', group: '症状');
+    await db.recordsDao.createRecord(
+      timestamp: DateTime.now(),
+      value: 0,
+      comment: 'アーカイブタグ付き',
+      tagIds: [tagId],
+    );
+    await db.tagsDao.archiveTag(tagId);
+    await pumpTrackScreen(tester);
+
+    await tester.longPress(find.text('アーカイブタグ付き'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('編集'));
+    await tester.pumpAndSettle();
+
+    expect(find.widgetWithText(InputChip, '旧タグ'), findsOneWidget);
+
+    await flushPendingTimers(tester);
+  });
+
   testWidgets('タイムラインの記録を長押しして削除できる', (tester) async {
     await db.recordsDao.createRecord(
       timestamp: DateTime.now(),
