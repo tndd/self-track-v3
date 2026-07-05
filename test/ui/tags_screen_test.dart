@@ -35,7 +35,9 @@ void main() {
     expect(find.text('頭痛'), findsOneWidget);
     expect(find.text('症状'), findsOneWidget);
 
-    // 編集
+    // 編集（チップをタップ→操作シートの「編集」）
+    await tester.tap(find.text('頭痛'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();
     await tester.enterText(find.widgetWithText(TextFormField, '名前'), 'めまい');
@@ -45,7 +47,9 @@ void main() {
     expect(find.text('めまい'), findsOneWidget);
     expect(find.text('頭痛'), findsNothing);
 
-    // アーカイブ（タップで即座に選択候補から外れ、下部の折りたたみに移動する）
+    // アーカイブ（チップ→シートの「アーカイブ」で下部の折りたたみに移動する）
+    await tester.tap(find.text('めまい'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.archive_outlined));
     await tester.pumpAndSettle();
 
@@ -54,7 +58,9 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('めまい'), findsOneWidget);
 
-    // アーカイブ解除
+    // アーカイブ解除（チップ→シートの「アーカイブ解除」）
+    await tester.tap(find.text('めまい'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.unarchive_outlined));
     await tester.pumpAndSettle();
 
@@ -137,7 +143,9 @@ void main() {
     var tags = await db.select(db.tags).get();
     expect(tags.single.colorIndex, 1);
 
-    // 編集で「自動」に戻すとnullになる。
+    // 編集で「自動」に戻すとnullになる（チップ→操作シートの「編集」）。
+    await tester.tap(find.text('頭痛'));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.edit_outlined));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('color-swatch-auto')));
