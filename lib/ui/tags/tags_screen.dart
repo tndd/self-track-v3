@@ -8,10 +8,12 @@ import 'tag_form_dialog.dart';
 
 /// タグ管理画面。
 ///
-/// タグを一直線のリストではなく「グループごとのカード」にまとめ、
+/// タグを一直線のリストではなく「グループごとのセクション」にまとめ、
 /// 各タグは実効配色のチップ（ピル）として Wrap で並べる。
+/// 他画面（Statsなど）に合わせ、カードは使わずフラットなセクション
+/// （小見出し + Divider区切り）で構成する。
 /// チップをタップするとボトムシートが開き、編集・アーカイブ操作を行う。
-/// アーカイブ済みタグは最下部の折りたたみカードに退避する。
+/// アーカイブ済みタグは最下部の折りたたみセクションに退避する。
 class TagsScreen extends ConsumerWidget {
   const TagsScreen({super.key});
 
@@ -188,19 +190,24 @@ class TagsScreen extends ConsumerWidget {
           final groupNames = grouped.keys.toList()..sort();
 
           return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+            padding: const EdgeInsets.only(top: 8, bottom: 88),
             children: [
-              for (final group in groupNames)
-                _GroupCard(
-                  group: group,
-                  tags: grouped[group]!,
+              for (var i = 0; i < groupNames.length; i++) ...[
+                if (i > 0) const Divider(height: 24, indent: 16, endIndent: 16),
+                _GroupSection(
+                  group: groupNames[i],
+                  tags: grouped[groupNames[i]]!,
                   onTagTap: (tag) => _showTagActions(context, ref, tag, allTags),
                 ),
-              if (archived.isNotEmpty)
-                _ArchivedCard(
+              ],
+              if (archived.isNotEmpty) ...[
+                if (groupNames.isNotEmpty)
+                  const Divider(height: 24, indent: 16, endIndent: 16),
+                _ArchivedSection(
                   tags: archived,
                   onTagTap: (tag) => _showTagActions(context, ref, tag, allTags),
                 ),
+              ],
             ],
           );
         },
@@ -246,10 +253,10 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// 1グループ分のカード。ヘッダ（グループ名 + 件数バッジ）と
-/// タグチップの Wrap を白カードにまとめる。
-class _GroupCard extends StatelessWidget {
-  const _GroupCard({
+/// 1グループ分のフラットなセクション。Stats画面のセクション見出しと
+/// 同じトーンの小見出し（+ 件数バッジ）の下にタグチップの Wrap を並べる。
+class _GroupSection extends StatelessWidget {
+  const _GroupSection({
     required this.group,
     required this.tags,
     required this.onTagTap,
@@ -261,40 +268,26 @@ class _GroupCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE9EDF2)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0A0F172A),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  group,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                  ),
+              Text(
+                group,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF344054),
                 ),
               ),
+              const SizedBox(width: 8),
               _CountBadge(count: tags.length),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -306,74 +299,66 @@ class _GroupCard extends StatelessWidget {
   }
 }
 
-/// アーカイブ済みタグの折りたたみカード。既定では閉じており、
-/// ヘッダタップで灰色チップの一覧を開閉する。
-class _ArchivedCard extends StatefulWidget {
-  const _ArchivedCard({required this.tags, required this.onTagTap});
+/// アーカイブ済みタグの折りたたみセクション。既定では閉じており、
+/// 見出しタップで灰色チップの一覧を開閉する。
+class _ArchivedSection extends StatefulWidget {
+  const _ArchivedSection({required this.tags, required this.onTagTap});
 
   final List<Tag> tags;
   final void Function(Tag) onTagTap;
 
   @override
-  State<_ArchivedCard> createState() => _ArchivedCardState();
+  State<_ArchivedSection> createState() => _ArchivedSectionState();
 }
 
-class _ArchivedCardState extends State<_ArchivedCard> {
+class _ArchivedSectionState extends State<_ArchivedSection> {
   bool _expanded = false;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F3F7),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE9EDF2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(20),
-            onTap: () => setState(() => _expanded = !_expanded),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 14, 14, 14),
-              child: Row(
-                children: [
-                  const Icon(Icons.inventory_2_outlined, size: 18, color: Color(0xFF64748B)),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'アーカイブ済み（${widget.tags.length}）',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF475569),
-                      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            child: Row(
+              children: [
+                const Icon(Icons.inventory_2_outlined, size: 16, color: Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'アーカイブ済み（${widget.tags.length}）',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF64748B),
                     ),
                   ),
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: const Color(0xFF64748B),
-                  ),
-                ],
-              ),
+                ),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  size: 20,
+                  color: const Color(0xFF64748B),
+                ),
+              ],
             ),
           ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 16),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final tag in widget.tags)
-                    _TagChip(tag: tag, onTap: () => widget.onTagTap(tag)),
-                ],
-              ),
+        ),
+        if (_expanded)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final tag in widget.tags)
+                  _TagChip(tag: tag, onTap: () => widget.onTagTap(tag)),
+              ],
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -389,7 +374,8 @@ class _CountBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F3F7),
+        // フラット背景（scaffoldのF7F8FB）の上でも見えるよう一段濃いグレー。
+        color: const Color(0xFFE9EDF2),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
@@ -415,7 +401,8 @@ class _TagChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = resolveTagChipColors(tag.name, tag.colorIndex);
-    final background = tag.isArchived ? const Color(0xFFE7EAF0) : colors.background;
+    // アーカイブ済みはフラット背景上でも判別できる濃さのグレーに落とす。
+    final background = tag.isArchived ? const Color(0xFFE2E6ED) : colors.background;
     final foreground = tag.isArchived ? const Color(0xFF94A3B8) : colors.foreground;
     return Material(
       color: background,
