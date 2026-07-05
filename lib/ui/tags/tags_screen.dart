@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/database.dart';
 import '../../providers/database_providers.dart';
+import '../section_chip.dart';
 import '../tag_colors.dart';
 import 'tag_form_dialog.dart';
 
@@ -10,8 +11,8 @@ import 'tag_form_dialog.dart';
 ///
 /// タグを一直線のリストではなく「グループごとのセクション」にまとめ、
 /// 各タグは実効配色のチップ（ピル）として Wrap で並べる。
-/// 他画面（Statsなど）に合わせ、カードは使わずフラットなセクション
-/// （小見出し + Divider区切り）で構成する。
+/// 区切りにはTrack/Calendarと共通のSectionChip（全幅の灰色タイトルバー）
+/// を使い、画面間の世界観を統一する。
 /// チップをタップするとボトムシートが開き、編集・アーカイブ操作を行う。
 /// アーカイブ済みタグは最下部の折りたたみセクションに退避する。
 class TagsScreen extends ConsumerWidget {
@@ -192,22 +193,17 @@ class TagsScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.only(top: 8, bottom: 88),
             children: [
-              for (var i = 0; i < groupNames.length; i++) ...[
-                if (i > 0) const Divider(height: 24, indent: 16, endIndent: 16),
+              for (final group in groupNames)
                 _GroupSection(
-                  group: groupNames[i],
-                  tags: grouped[groupNames[i]]!,
+                  group: group,
+                  tags: grouped[group]!,
                   onTagTap: (tag) => _showTagActions(context, ref, tag, allTags),
                 ),
-              ],
-              if (archived.isNotEmpty) ...[
-                if (groupNames.isNotEmpty)
-                  const Divider(height: 24, indent: 16, endIndent: 16),
+              if (archived.isNotEmpty)
                 _ArchivedSection(
                   tags: archived,
                   onTagTap: (tag) => _showTagActions(context, ref, tag, allTags),
                 ),
-              ],
             ],
           );
         },
@@ -253,8 +249,10 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-/// 1グループ分のフラットなセクション。Stats画面のセクション見出しと
-/// 同じトーンの小見出し（+ 件数バッジ）の下にタグチップの Wrap を並べる。
+/// 1グループ分のセクション。Track/Calendarと共通のSectionChip
+/// （全幅の灰色タイトルバー）で区切り、右端に件数を添える。
+/// バーの下はタグチップのWrapのみを置き、チップの色が主役になるよう
+/// 余計な装飾を足さない。
 class _GroupSection extends StatelessWidget {
   const _GroupSection({
     required this.group,
@@ -269,29 +267,33 @@ class _GroupSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                group,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF344054),
-                ),
+          SectionChip(
+            label: group,
+            trailing: Text(
+              '${tags.length}',
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF64748B),
               ),
-              const SizedBox(width: 8),
-              _CountBadge(count: tags.length),
-            ],
+            ),
           ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [for (final tag in tags) _TagChip(tag: tag, onTap: () => onTagTap(tag))],
+          const SizedBox(height: 12),
+          // チップはバーと形が似るため、バーより一段内側に寄せて
+          // 「バーの中身」として読めるようにする。
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final tag in tags) _TagChip(tag: tag, onTap: () => onTagTap(tag)),
+              ],
+            ),
           ),
         ],
       ),
@@ -299,8 +301,8 @@ class _GroupSection extends StatelessWidget {
   }
 }
 
-/// アーカイブ済みタグの折りたたみセクション。既定では閉じており、
-/// 見出しタップで灰色チップの一覧を開閉する。
+/// アーカイブ済みタグの折りたたみセクション。SectionChipをそのまま
+/// タップ可能にし（Trackの日付バーと同じ操作感）、シェブロンで開閉を示す。
 class _ArchivedSection extends StatefulWidget {
   const _ArchivedSection({required this.tags, required this.onTagTap});
 
@@ -316,75 +318,38 @@ class _ArchivedSectionState extends State<_ArchivedSection> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        InkWell(
-          onTap: () => setState(() => _expanded = !_expanded),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: Row(
-              children: [
-                const Icon(Icons.inventory_2_outlined, size: 16, color: Color(0xFF64748B)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'アーカイブ済み（${widget.tags.length}）',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF64748B),
-                    ),
-                  ),
-                ),
-                Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  size: 20,
-                  color: const Color(0xFF64748B),
-                ),
-              ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            customBorder: const StadiumBorder(),
+            onTap: () => setState(() => _expanded = !_expanded),
+            child: SectionChip(
+              label: 'アーカイブ済み（${widget.tags.length}）',
+              trailing: Icon(
+                _expanded ? Icons.expand_less : Icons.expand_more,
+                size: 20,
+                color: const Color(0xFF64748B),
+              ),
             ),
           ),
-        ),
-        if (_expanded)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final tag in widget.tags)
-                  _TagChip(tag: tag, onTap: () => widget.onTagTap(tag)),
-              ],
+          if (_expanded) ...[
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final tag in widget.tags)
+                    _TagChip(tag: tag, onTap: () => widget.onTagTap(tag)),
+                ],
+              ),
             ),
-          ),
-      ],
-    );
-  }
-}
-
-/// グループ内のタグ件数を示す小さなバッジ。
-class _CountBadge extends StatelessWidget {
-  const _CountBadge({required this.count});
-
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-      decoration: BoxDecoration(
-        // フラット背景（scaffoldのF7F8FB）の上でも見えるよう一段濃いグレー。
-        color: const Color(0xFFE9EDF2),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        '$count',
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: Color(0xFF475569),
-        ),
+          ],
+        ],
       ),
     );
   }
