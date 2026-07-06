@@ -101,193 +101,206 @@ class TrendSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionChip(label: '7日間の傾向'),
-          const SizedBox(height: 14),
-          // mockの.trendNumRow相当。ヘッダー行がタイトルの横幅を超えて
-          // はみ出さないよう、余った分は数値・バッジ側を縮めて詰める
-          // (前週比ラベルは固定表示を優先する)。
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
-                  average != null ? (average + 3).toStringAsFixed(1) : '-',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    // mockの.trendNumRow b(20px) × 1.37。
-                    fontSize: 27,
-                    fontWeight: FontWeight.w800,
-                    color: Color(0xFF475569),
-                  ),
-                ),
-              ),
-              // mockの.trendNumRow{gap:8px} × 1.37。
-              const SizedBox(width: 11),
-              const Text(
-                '前週比',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-              const SizedBox(width: 6),
-              if (diff != null)
-                Flexible(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      // mockの.trendTag{padding:2px 7px} × 1.37。
-                      horizontal: 9.5,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: diff >= 0
-                          ? const Color(0xFFE7F8EE)
-                          : const Color(0xFFFDECEC),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '${diff >= 0 ? '↗ +' : '↘ '}${diff.toStringAsFixed(1)}',
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        // mockの.trendTag(10px) × 1.37。
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: diff >= 0
-                            ? const Color(0xFF16A34A)
-                            : const Color(0xFFDC2626),
+          // タイトルバーは全幅のまま。数値・グラフ・日付ラベルは左右に
+          // 内側マージンを付け、グレーのタイトルバーより明確に狭くする
+          // （バーの縁とツライチにならないようにする）。
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 14),
+                // mockの.trendNumRow相当。ヘッダー行がタイトルの横幅を超えて
+                // はみ出さないよう、余った分は数値・バッジ側を縮めて詰める
+                // (前週比ラベルは固定表示を優先する)。
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
+                        average != null
+                            ? (average + 3).toStringAsFixed(1)
+                            : '-',
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          // mockの.trendNumRow b(20px) × 1.37。
+                          fontSize: 27,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF475569),
+                        ),
                       ),
                     ),
-                  ),
-                )
-              else
-                const Text(
-                  '-',
-                  style: TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 72,
-            child: spots.length < 2
-                ? const Center(
-                    child: Text(
-                      'データが不足しています',
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    // mockの.trendNumRow{gap:8px} × 1.37。
+                    const SizedBox(width: 11),
+                    const Text(
+                      '前週比',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
-                  )
-                : LineChart(
-                    LineChartData(
-                      minY: minY,
-                      maxY: maxY,
-                      gridData: const FlGridData(show: false),
-                      titlesData: const FlTitlesData(show: false),
-                      borderData: FlBorderData(show: false),
-                      lineTouchData: const LineTouchData(enabled: false),
-                      // 描画をチャート枠内にクリップする。未設定だと
-                      // 両端の点や曲線が枠の外へわずかにはみ出し、
-                      // 上のタイトルバーの幅を超えて見えてしまう。
-                      clipData: const FlClipData.all(),
-                      extraLinesData: ExtraLinesData(
-                        horizontalLines: [
-                          if (showBaseline)
-                            HorizontalLine(
-                              y: 0,
-                              color: Colors.grey.shade400,
-                              strokeWidth: 1,
-                              dashArray: const [3, 3],
-                              label: HorizontalLineLabel(
-                                show: true,
-                                alignment: Alignment.topLeft,
-                                padding: const EdgeInsets.only(
-                                  left: 2,
-                                  bottom: 2,
-                                ),
-                                style: const TextStyle(
-                                  // mockの基準線ラベル(7px) × 1.37。
-                                  fontSize: 10,
-                                  color: Color(0xFF9AA2B0),
-                                ),
-                                labelResolver: (_) => '普通',
-                              ),
-                            ),
-                        ],
-                      ),
-                      lineBarsData: [
-                        LineChartBarData(
-                          spots: spots,
-                          isCurved: true,
-                          // 曲線補間が両端点の外側へオーバーシュートして
-                          // 枠をはみ出さないようにする。
-                          preventCurveOverShooting: true,
-                          // mockのpivotGradLine準拠: 基準線(普通=0)を境に
-                          // 下は赤→橙、上は緑→青の縦グラデーションで塗る。
-                          // 境界位置は動的レンジ内の基準線の高さに追従する。
-                          gradient: LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: pivotColors,
-                            stops: pivotStops,
+                    const SizedBox(width: 6),
+                    if (diff != null)
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            // mockの.trendTag{padding:2px 7px} × 1.37。
+                            horizontal: 9.5,
+                            vertical: 3,
                           ),
-                          barWidth: 2.5,
-                          dotData: FlDotData(
-                            show: true,
-                            getDotPainter: (spot, percent, bar, index) =>
-                                FlDotCirclePainter(
-                                  radius: 3,
-                                  // 各点はその日の体調レベルの色で塗る（mock準拠）。
-                                  color: ConditionLevel.fromDbValue(
-                                    roundDailyScore(spot.y),
-                                  ).color,
-                                  strokeWidth: 0,
-                                ),
+                          decoration: BoxDecoration(
+                            color: diff >= 0
+                                ? const Color(0xFFE7F8EE)
+                                : const Color(0xFFFDECEC),
+                            borderRadius: BorderRadius.circular(999),
                           ),
-                          // mockのpivotGradFill準拠: 線と基準線の間を
-                          // 同系色・低不透明度のグラデーションで塗る。
-                          belowBarData: BarAreaData(
-                            show: true,
-                            applyCutOffY: true,
-                            cutOffY: 0,
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                for (final c in pivotColors)
-                                  c.withValues(alpha: 0.24),
-                              ],
-                              stops: pivotStops,
-                            ),
-                          ),
-                          aboveBarData: BarAreaData(
-                            show: true,
-                            applyCutOffY: true,
-                            cutOffY: 0,
-                            gradient: LinearGradient(
-                              begin: Alignment.bottomCenter,
-                              end: Alignment.topCenter,
-                              colors: [
-                                for (final c in pivotColors)
-                                  c.withValues(alpha: 0.24),
-                              ],
-                              stops: pivotStops,
+                          child: Text(
+                            '${diff >= 0 ? '↗ +' : '↘ '}${diff.toStringAsFixed(1)}',
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              // mockの.trendTag(10px) × 1.37。
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: diff >= 0
+                                  ? const Color(0xFF16A34A)
+                                  : const Color(0xFFDC2626),
                             ),
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              for (final day in days)
-                Text(
-                  '${day.month}/${day.day}',
-                  style: const TextStyle(
-                    // mockの.dayLabels(9px) × 1.37。
-                    fontSize: 12,
-                    color: Color(0xFFB0B7C3),
-                  ),
+                      )
+                    else
+                      const Text(
+                        '-',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 72,
+                  child: spots.length < 2
+                      ? const Center(
+                          child: Text(
+                            'データが不足しています',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        )
+                      : LineChart(
+                          LineChartData(
+                            minY: minY,
+                            maxY: maxY,
+                            gridData: const FlGridData(show: false),
+                            titlesData: const FlTitlesData(show: false),
+                            borderData: FlBorderData(show: false),
+                            lineTouchData: const LineTouchData(enabled: false),
+                            // 描画をチャート枠内にクリップする。未設定だと
+                            // 両端の点や曲線が枠の外へわずかにはみ出し、
+                            // 上のタイトルバーの幅を超えて見えてしまう。
+                            clipData: const FlClipData.all(),
+                            extraLinesData: ExtraLinesData(
+                              horizontalLines: [
+                                if (showBaseline)
+                                  HorizontalLine(
+                                    y: 0,
+                                    color: Colors.grey.shade400,
+                                    strokeWidth: 1,
+                                    dashArray: const [3, 3],
+                                    label: HorizontalLineLabel(
+                                      show: true,
+                                      alignment: Alignment.topLeft,
+                                      padding: const EdgeInsets.only(
+                                        left: 2,
+                                        bottom: 2,
+                                      ),
+                                      style: const TextStyle(
+                                        // mockの基準線ラベル(7px) × 1.37。
+                                        fontSize: 10,
+                                        color: Color(0xFF9AA2B0),
+                                      ),
+                                      labelResolver: (_) => '普通',
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            lineBarsData: [
+                              LineChartBarData(
+                                spots: spots,
+                                isCurved: true,
+                                // 曲線補間が両端点の外側へオーバーシュートして
+                                // 枠をはみ出さないようにする。
+                                preventCurveOverShooting: true,
+                                // mockのpivotGradLine準拠: 基準線(普通=0)を境に
+                                // 下は赤→橙、上は緑→青の縦グラデーションで塗る。
+                                // 境界位置は動的レンジ内の基準線の高さに追従する。
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: pivotColors,
+                                  stops: pivotStops,
+                                ),
+                                barWidth: 2.5,
+                                dotData: FlDotData(
+                                  show: true,
+                                  getDotPainter: (spot, percent, bar, index) =>
+                                      FlDotCirclePainter(
+                                        radius: 3,
+                                        // 各点はその日の体調レベルの色で塗る（mock準拠）。
+                                        color: ConditionLevel.fromDbValue(
+                                          roundDailyScore(spot.y),
+                                        ).color,
+                                        strokeWidth: 0,
+                                      ),
+                                ),
+                                // mockのpivotGradFill準拠: 線と基準線の間を
+                                // 同系色・低不透明度のグラデーションで塗る。
+                                belowBarData: BarAreaData(
+                                  show: true,
+                                  applyCutOffY: true,
+                                  cutOffY: 0,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: [
+                                      for (final c in pivotColors)
+                                        c.withValues(alpha: 0.24),
+                                    ],
+                                    stops: pivotStops,
+                                  ),
+                                ),
+                                aboveBarData: BarAreaData(
+                                  show: true,
+                                  applyCutOffY: true,
+                                  cutOffY: 0,
+                                  gradient: LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: [
+                                      for (final c in pivotColors)
+                                        c.withValues(alpha: 0.24),
+                                    ],
+                                    stops: pivotStops,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    for (final day in days)
+                      Text(
+                        '${day.month}/${day.day}',
+                        style: const TextStyle(
+                          // mockの.dayLabels(9px) × 1.37。
+                          fontSize: 12,
+                          color: Color(0xFFB0B7C3),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
