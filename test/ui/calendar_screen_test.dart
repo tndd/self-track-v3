@@ -54,6 +54,13 @@ void main() {
     final monthLabel = '${fixedNow.year}年${fixedNow.month}月';
     expect(find.text(monthLabel), findsOneWidget);
     expect(find.text('今月の割合'), findsOneWidget);
+    // 下部セクションはビューポート外に出ることがあるため、スクロールして
+    // 表示されることを確認する。
+    await tester.scrollUntilVisible(
+      find.text('7日間の傾向'),
+      200,
+      scrollable: find.byType(Scrollable),
+    );
     expect(find.text('7日間の傾向'), findsOneWidget);
     // 記録の無い日は空白（今月平均の"-"とは別に、日次データ無しを示す）。
     expect(find.text('データ無し'), findsNothing);
@@ -61,7 +68,9 @@ void main() {
     // それ以外の日は数字のみの空白セルになる。
     expect(find.byType(CircleAvatar), findsNWidgets(2));
 
-    // 前の月に移動すると見出しが変わる
+    // 前の月に移動すると見出しが変わる（先頭までスクロールで戻してから操作）
+    await tester.drag(find.byType(Scrollable), const Offset(0, 600));
+    await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.chevron_left));
     await tester.pumpAndSettle();
     final prevMonth = DateTime(fixedNow.year, fixedNow.month - 1, 1);

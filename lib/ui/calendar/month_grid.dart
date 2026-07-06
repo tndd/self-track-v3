@@ -32,7 +32,8 @@ class MonthGrid extends StatelessWidget {
     final rowCount = (totalCells / 7).ceil();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      // 横マージンはmockの16px × 1.37 dp換算。
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Column(
         children: [
           Row(
@@ -43,7 +44,8 @@ class MonthGrid extends StatelessWidget {
                     child: Text(
                       label,
                       style: TextStyle(
-                        fontSize: 10,
+                        // mockの.weekHead(10px) × 1.37。
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: label == '日'
                             ? const Color(0xFFEF4444)
@@ -117,51 +119,68 @@ class _DayCell extends StatelessWidget {
     return Expanded(
       child: InkWell(
         onTap: () => onDayTap(date),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (score == null)
-                // 記録の無い日も円と同じ高さを確保し、日付ラベルの
-                // 縦位置を記録のある日と揃える。
-                const SizedBox(width: 30, height: 30)
-              else
-                Builder(
-                  builder: (context) {
-                    final level = ConditionLevel.fromDbValue(
-                      roundDailyScore(score),
-                    );
-                    return CircleAvatar(
-                      radius: 15,
-                      backgroundColor: level.color,
-                      child: Text(
-                        // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
-                        (score + 3).toStringAsFixed(1),
-                        style: TextStyle(
-                          // モック案2準拠: グレー(普通)の円だけ白文字だと
-                          // 視認性が落ちるため濃色文字にする。
-                          color: level == ConditionLevel.normal
-                              ? const Color(0xFF111827)
-                              : Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              const SizedBox(height: 2),
-              Text(
-                '$day',
-                style: TextStyle(
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.grey.shade400,
-                ),
+        // セルの実寸に合わせて円の直径を決める。mockでは円がセル幅の
+        // 約8割を占めるため、固定サイズではなく画面幅に追従させる。
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // 下の日付ラベルと間隔のぶんを差し引いた高さに円を収める。
+            // ラベルをmock比例(13pt)に拡大した分、確保する余白も広げる。
+            const dayLabelSpace = 28.0;
+            final diameter = (constraints.maxWidth * 0.8)
+                .clamp(16.0, 52.0)
+                .clamp(
+                  0.0,
+                  (constraints.maxHeight - dayLabelSpace).clamp(16.0, 52.0),
+                );
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (score == null)
+                    // 記録の無い日も円と同じ高さを確保し、日付ラベルの
+                    // 縦位置を記録のある日と揃える。
+                    SizedBox(width: diameter, height: diameter)
+                  else
+                    Builder(
+                      builder: (context) {
+                        final level = ConditionLevel.fromDbValue(
+                          roundDailyScore(score),
+                        );
+                        return CircleAvatar(
+                          radius: diameter / 2,
+                          backgroundColor: level.color,
+                          child: Text(
+                            // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
+                            (score + 3).toStringAsFixed(1),
+                            style: TextStyle(
+                              // モック案2準拠: グレー(普通)の円だけ白文字だと
+                              // 視認性が落ちるため濃色文字にする。
+                              color: level == ConditionLevel.normal
+                                  ? const Color(0xFF111827)
+                                  : Colors.white,
+                              // 円の直径に比例させる(直径30pxで10pt相当)。
+                              fontSize: diameter / 3,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$day',
+                    style: TextStyle(
+                      // mockの.avgNum(9.5px) × 1.37。
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
