@@ -150,13 +150,10 @@ class ComposerCard extends ConsumerWidget {
                   backgroundColor: level.color,
                   fixedSize: const Size(44, 44),
                 ),
-                icon: Icon(
+                icon: const Icon(
                   Icons.arrow_upward,
                   size: 22,
-                  // mockでは普通（グレー）のみ濃色アイコン、他は白。
-                  color: level == ConditionLevel.normal
-                      ? const Color(0xFF111827)
-                      : Colors.white,
+                  color: Colors.white,
                 ),
                 onPressed: onSubmit,
               ),
@@ -382,10 +379,8 @@ class _StatusStrip extends StatelessWidget {
                       backgroundColor: level.color,
                       child: Text(
                         '${level.uiValue}',
-                        style: TextStyle(
-                          color: level == ConditionLevel.normal
-                              ? const Color(0xFF111827)
-                              : Colors.white,
+                        style: const TextStyle(
+                          color: Colors.white,
                           fontSize: 22,
                           fontWeight: FontWeight.w800,
                         ),
