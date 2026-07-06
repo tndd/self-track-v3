@@ -111,7 +111,8 @@ class TagsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
                       color: colors.background,
-                      borderRadius: BorderRadius.circular(999),
+                      // 一覧のタグチップと同じ角ばった形状で揃える。
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       tag.name,
@@ -208,8 +209,13 @@ class TagsScreen extends ConsumerWidget {
           );
         },
       ),
+      // M3既定の角丸スクエア+トーナル配色は浮いて見えるため、
+      // 昔ながらの円形・濃色地に白アイコンのFABにする。
       floatingActionButton: FloatingActionButton(
         onPressed: () => _addTag(context, ref, allTagsAsync.value ?? const []),
+        shape: const CircleBorder(),
+        backgroundColor: const Color(0xFF111827),
+        foregroundColor: Colors.white,
         child: const Icon(Icons.add),
       ),
     );
@@ -266,8 +272,10 @@ class _GroupSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // グループ同士が詰まって見えないよう、セクション下側に大きめの
+    // 余白を取って区切りバーごとの塊を明確にする。
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -319,7 +327,7 @@ class _ArchivedSectionState extends State<_ArchivedSection> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -369,11 +377,13 @@ class _TagChip extends StatelessWidget {
     // アーカイブ済みはフラット背景上でも判別できる濃さのグレーに落とす。
     final background = tag.isArchived ? const Color(0xFFE2E6ED) : colors.background;
     final foreground = tag.isArchived ? const Color(0xFF94A3B8) : colors.foreground;
+    // 区切りバー（SectionChip）がピル形状のため、タグは角ばった
+    // 小さめの角丸にして形状で役割を差別化する。
     return Material(
       color: background,
-      borderRadius: BorderRadius.circular(999),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(8),
         onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
