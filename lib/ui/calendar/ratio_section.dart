@@ -40,16 +40,20 @@ class RatioSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionChip(label: '今月の割合'),
-          const SizedBox(height: 10),
-          // mock準拠の横並び: ドーナツ(110px固定) / 凡例(固定幅・ドーナツと同じ高さに等間隔配置)
+          // mockの.ratioContentH{padding-top:10px} × 1.37 dp換算。
+          const SizedBox(height: 14),
+          // mock準拠の横並び: ドーナツ / 凡例(固定幅・ドーナツと同じ高さに等間隔配置)
           // / 前月比(残り幅の中央寄せ)。凡例をExpandedにすると中央に大きな
           // 空白ができてmockと乖離するため、幅は固定にする。
+          // 各要素の寸法はmock/calendar.htmlのpx値 × 1.37 dp換算
+          // （他画面のComposerCard等と同じ規約）。
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               SizedBox(
-                width: 110,
-                height: 110,
+                // mockの.ratioDonut(90px) × 1.37。
+                width: 123,
+                height: 123,
                 child: total == 0
                     ? const Center(
                         child: Text(
@@ -68,13 +72,16 @@ class RatioSection extends StatelessWidget {
                                     PieChartSectionData(
                                       value: (counts[level] ?? 0).toDouble(),
                                       color: level.color,
-                                      radius: 15,
+                                      // mockのring stroke-width(14) を
+                                      // viewBoxスケール(0.9)と1.37で換算。
+                                      radius: 17.5,
                                       showTitle: false,
                                     ),
                               ],
                               // mockのドーナツはセグメント間に隙間が無い。
                               sectionsSpace: 0,
-                              centerSpaceRadius: 34,
+                              // mockの内側半径(31svg単位) × 0.9 × 1.37。
+                              centerSpaceRadius: 38,
                             ),
                           ),
                           Column(
@@ -86,7 +93,8 @@ class RatioSection extends StatelessWidget {
                                     ? (monthAverage! + 3).toStringAsFixed(1)
                                     : '-',
                                 style: const TextStyle(
-                                  fontSize: 23,
+                                  // mockのSVGテキスト(19px) × 1.37。
+                                  fontSize: 26,
                                   fontWeight: FontWeight.w800,
                                   color: Color(0xFF475569),
                                 ),
@@ -94,7 +102,8 @@ class RatioSection extends StatelessWidget {
                               const Text(
                                 '今月平均',
                                 style: TextStyle(
-                                  fontSize: 10.5,
+                                  // mockのSVGテキスト(9px) × 1.37。
+                                  fontSize: 12,
                                   color: Color(0xFFAAB2C0),
                                 ),
                               ),
@@ -103,11 +112,15 @@ class RatioSection extends StatelessWidget {
                         ],
                       ),
               ),
-              const SizedBox(width: 10),
+              // mockの.ratioContentH{gap:10px} × 1.37。
+              const SizedBox(width: 14),
               // 凡例: mockの.legendColA（幅固定・ドーナツと同じ高さに等間隔配置）。
+              // 高さはmockの90px × 1.37。幅はmock値(60px×1.37=82)だと
+              // 実フォントで2桁日数+2桁%が収まらずオーバーフローするため、
+              // 実測に合わせて広げている。
               SizedBox(
-                width: 92,
-                height: 110,
+                width: 104,
+                height: 123,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -123,20 +136,23 @@ class RatioSection extends StatelessWidget {
                               shape: BoxShape.circle,
                             ),
                           ),
-                          const SizedBox(width: 4),
+                          // mockの.legRowA{gap:4px} × 1.37。
+                          const SizedBox(width: 5.5),
                           Text(
                             '${counts[level] ?? 0}日',
                             style: const TextStyle(
-                              fontSize: 12.5,
+                              // mockの.legRowA b(10px) × 1.37。
+                              fontSize: 14,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 5.5),
                           if (total > 0)
                             Text(
                               '${(((counts[level] ?? 0) / total) * 100).round()}%',
                               style: const TextStyle(
-                                fontSize: 10.5,
+                                // mockの.pct(8.5px) × 1.37。
+                                fontSize: 11.5,
                                 color: Color(0xFF9AA2B0),
                               ),
                             ),
@@ -145,27 +161,32 @@ class RatioSection extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 14),
               // 前月比: mockの.momSlot（残り幅を使い、縦横とも中央に配置）。
               Expanded(
                 child: SizedBox(
-                  height: 110,
+                  // mockの.momSlot(90px) × 1.37。
+                  height: 123,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
                         '前月比',
                         style: TextStyle(
-                          fontSize: 11,
+                          // mockの.momLabel(9px) × 1.37。
+                          fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: Color(0xFF98A2B3),
                         ),
                       ),
-                      const SizedBox(height: 6),
+                      // mockの.momLabel{margin-bottom:6px} × 1.37。
+                      const SizedBox(height: 8),
                       if (diffPercent != null)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 15,
-                            vertical: 7,
+                            // mockの.momBadge{padding:6px 13px} × 1.37。
+                            horizontal: 18,
+                            vertical: 8,
                           ),
                           decoration: BoxDecoration(
                             color: diffPercent >= 0
@@ -176,7 +197,8 @@ class RatioSection extends StatelessWidget {
                           child: Text(
                             '${diffPercent >= 0 ? '↗ +' : '↘ '}${diffPercent.round()}%',
                             style: TextStyle(
-                              fontSize: 17,
+                              // mockの.momBadge(15px) × 1.37。
+                              fontSize: 20.5,
                               fontWeight: FontWeight.w800,
                               color: diffPercent >= 0
                                   ? const Color(0xFF16A34A)
@@ -187,15 +209,17 @@ class RatioSection extends StatelessWidget {
                       else
                         const Text(
                           '-',
-                          style: TextStyle(fontSize: 17, color: Colors.grey),
+                          style: TextStyle(fontSize: 20.5, color: Colors.grey),
                         ),
                       if (prevAverage != null)
                         Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                          // mockの.momBadgeSub{margin-top:6px} × 1.37。
+                          padding: const EdgeInsets.only(top: 8),
                           child: Text(
                             '先月 ${(prevAverage! + 3).toStringAsFixed(1)}',
                             style: const TextStyle(
-                              fontSize: 10.5,
+                              // mockの.momBadgeSub(8.5px) × 1.37。
+                              fontSize: 11.5,
                               color: Color(0xFFAAB2C0),
                             ),
                           ),
