@@ -6,8 +6,8 @@ import 'package:flutter/material.dart';
 enum ConditionLevel {
   worst(1, '最悪', Color(0xFFEF4444)),
   bad(2, '悪い', Color(0xFFF97316)),
-  normal(3, '普通', Color(0xFF94A3B8)),
-  good(4, '良い', Color(0xFF22C55E)),
+  normal(3, '普通', Color(0xFF22C55E)),
+  good(4, '良い', Color(0xFFA3E635)),
   best(5, '最高', Color(0xFF3B82F6));
 
   const ConditionLevel(this.uiValue, this.label, this.color);
