@@ -126,7 +126,8 @@ class _MonthNavRow extends ConsumerWidget {
           ),
           Text(
             '${month.year}年${month.month}月',
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+            // mock/calendar.html .monthNavRow b（13px）× 1.37 dp換算。
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
           ),
           IconButton(
             icon: const Icon(Icons.chevron_right),
