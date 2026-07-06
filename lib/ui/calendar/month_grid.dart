@@ -32,7 +32,8 @@ class MonthGrid extends StatelessWidget {
     final rowCount = (totalCells / 7).ceil();
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      // 横マージンはmockの16px × 1.37 dp換算。
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Column(
         children: [
           Row(
@@ -43,7 +44,8 @@ class MonthGrid extends StatelessWidget {
                     child: Text(
                       label,
                       style: TextStyle(
-                        fontSize: 10,
+                        // mockの.weekHead(10px) × 1.37。
+                        fontSize: 14,
                         fontWeight: FontWeight.bold,
                         color: label == '日'
                             ? const Color(0xFFEF4444)
@@ -122,7 +124,8 @@ class _DayCell extends StatelessWidget {
         child: LayoutBuilder(
           builder: (context, constraints) {
             // 下の日付ラベルと間隔のぶんを差し引いた高さに円を収める。
-            const dayLabelSpace = 24.0;
+            // ラベルをmock比例(13pt)に拡大した分、確保する余白も広げる。
+            const dayLabelSpace = 28.0;
             final diameter = (constraints.maxWidth * 0.8)
                 .clamp(16.0, 52.0)
                 .clamp(
@@ -168,7 +171,8 @@ class _DayCell extends StatelessWidget {
                   Text(
                     '$day',
                     style: TextStyle(
-                      fontSize: 9.5,
+                      // mockの.avgNum(9.5px) × 1.37。
+                      fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: Colors.grey.shade400,
                     ),

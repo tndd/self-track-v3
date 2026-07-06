@@ -95,57 +95,71 @@ class TrendSection extends StatelessWidget {
     final showBaseline = minY <= 0 && 0 <= maxY;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      // 横マージンはmockの16px × 1.37 dp換算。
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SectionChip(label: '7日間の傾向'),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
+          // mockの.trendNumRow相当。ヘッダー行がタイトルの横幅を超えて
+          // はみ出さないよう、余った分は数値・バッジ側を縮めて詰める
+          // (前週比ラベルは固定表示を優先する)。
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
-                average != null ? (average + 3).toStringAsFixed(1) : '-',
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF475569),
+              Flexible(
+                child: Text(
+                  // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
+                  average != null ? (average + 3).toStringAsFixed(1) : '-',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    // mockの.trendNumRow b(20px) × 1.37。
+                    fontSize: 27,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF475569),
+                  ),
                 ),
               ),
-              const SizedBox(width: 10),
+              // mockの.trendNumRow{gap:8px} × 1.37。
+              const SizedBox(width: 11),
               const Text(
                 '前週比',
-                style: TextStyle(fontSize: 9, color: Colors.grey),
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
               if (diff != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: diff >= 0
-                        ? const Color(0xFFE7F8EE)
-                        : const Color(0xFFFDECEC),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    '${diff >= 0 ? '↗ +' : '↘ '}${diff.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      // mockの.trendTag{padding:2px 7px} × 1.37。
+                      horizontal: 9.5,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
                       color: diff >= 0
-                          ? const Color(0xFF16A34A)
-                          : const Color(0xFFDC2626),
+                          ? const Color(0xFFE7F8EE)
+                          : const Color(0xFFFDECEC),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${diff >= 0 ? '↗ +' : '↘ '}${diff.toStringAsFixed(1)}',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        // mockの.trendTag(10px) × 1.37。
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: diff >= 0
+                            ? const Color(0xFF16A34A)
+                            : const Color(0xFFDC2626),
+                      ),
                     ),
                   ),
                 )
               else
                 const Text(
                   '-',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                  style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
             ],
           ),
@@ -183,7 +197,8 @@ class TrendSection extends StatelessWidget {
                                   bottom: 2,
                                 ),
                                 style: const TextStyle(
-                                  fontSize: 7,
+                                  // mockの基準線ラベル(7px) × 1.37。
+                                  fontSize: 10,
                                   color: Color(0xFF9AA2B0),
                                 ),
                                 labelResolver: (_) => '普通',
@@ -259,7 +274,11 @@ class TrendSection extends StatelessWidget {
               for (final day in days)
                 Text(
                   '${day.month}/${day.day}',
-                  style: const TextStyle(fontSize: 9, color: Color(0xFFB0B7C3)),
+                  style: const TextStyle(
+                    // mockの.dayLabels(9px) × 1.37。
+                    fontSize: 12,
+                    color: Color(0xFFB0B7C3),
+                  ),
                 ),
             ],
           ),

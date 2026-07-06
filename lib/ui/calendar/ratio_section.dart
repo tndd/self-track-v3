@@ -35,7 +35,8 @@ class RatioSection extends StatelessWidget {
         : null;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      // 横マージンはmockの16px × 1.37 dp換算。
+      padding: const EdgeInsets.symmetric(horizontal: 22),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -114,51 +115,54 @@ class RatioSection extends StatelessWidget {
               ),
               // mockの.ratioContentH{gap:10px} × 1.37。
               const SizedBox(width: 14),
-              // 凡例: mockの.legendColA（幅固定・ドーナツと同じ高さに等間隔配置）。
-              // 高さはmockの90px × 1.37。幅はmock値(60px×1.37=82)だと
-              // 実フォントで2桁日数+2桁%が収まらずオーバーフローするため、
-              // 実測に合わせて広げている。
-              SizedBox(
-                width: 104,
-                height: 123,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    for (final level in ConditionLevel.values)
-                      Row(
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: level.color,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          // mockの.legRowA{gap:4px} × 1.37。
-                          const SizedBox(width: 5.5),
-                          Text(
-                            '${counts[level] ?? 0}日',
-                            style: const TextStyle(
-                              // mockの.legRowA b(10px) × 1.37。
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(width: 5.5),
-                          if (total > 0)
-                            Text(
-                              '${(((counts[level] ?? 0) / total) * 100).round()}%',
-                              style: const TextStyle(
-                                // mockの.pct(8.5px) × 1.37。
-                                fontSize: 11.5,
-                                color: Color(0xFF9AA2B0),
+              // 凡例: mockの.legendColA（ドーナツと同じ高さに等間隔配置）。
+              // mockは幅60px固定だが、実フォントでは2桁日数+2桁%だと
+              // 収まらない。固定幅にすると前月比(momSlot)側の残り幅を
+              // 狭めてmockより窮屈に見えるため、必要な分だけ幅を取る
+              // IntrinsicWidthにして前月比側に余裕を残す。
+              IntrinsicWidth(
+                child: SizedBox(
+                  height: 123,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      for (final level in ConditionLevel.values)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: level.color,
+                                shape: BoxShape.circle,
                               ),
                             ),
-                        ],
-                      ),
-                  ],
+                            // mockの.legRowA{gap:4px} × 1.37。
+                            const SizedBox(width: 5.5),
+                            Text(
+                              '${counts[level] ?? 0}日',
+                              style: const TextStyle(
+                                // mockの.legRowA b(10px) × 1.37。
+                                fontSize: 14,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 5.5),
+                            if (total > 0)
+                              Text(
+                                '${(((counts[level] ?? 0) / total) * 100).round()}%',
+                                style: const TextStyle(
+                                  // mockの.pct(8.5px) × 1.37。
+                                  fontSize: 11.5,
+                                  color: Color(0xFF9AA2B0),
+                                ),
+                              ),
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(width: 14),

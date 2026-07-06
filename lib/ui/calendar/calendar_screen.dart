@@ -35,7 +35,11 @@ class CalendarScreen extends ConsumerWidget {
         };
 
         final prevMonth = DateTime(month.year, month.month - 1, 1);
-        final prevDaysInMonth = DateTime(prevMonth.year, prevMonth.month + 1, 0).day;
+        final prevDaysInMonth = DateTime(
+          prevMonth.year,
+          prevMonth.month + 1,
+          0,
+        ).day;
         final prevDefinedScores = [
           for (var d = 1; d <= prevDaysInMonth; d++)
             scoreFor(DateTime(prevMonth.year, prevMonth.month, d)),
@@ -51,10 +55,12 @@ class CalendarScreen extends ConsumerWidget {
         ];
         final last7Scores = [for (final d in last7Days) scoreFor(d)];
         // plan.md M5「7日平均と前週比」: 前週（7〜13日前）の平均。
-        final prevWeekAverage = averageScore([
-          for (var i = 13; i >= 7; i--)
-            scoreFor(todayStart.subtract(Duration(days: i))),
-        ].whereType<double>());
+        final prevWeekAverage = averageScore(
+          [
+            for (var i = 13; i >= 7; i--)
+              scoreFor(todayStart.subtract(Duration(days: i))),
+          ].whereType<double>(),
+        );
 
         // mock/calendar.html の .calendarZone{flex:0 0 70%} に準拠して、
         // カレンダー（月ナビ＋グリッド）が画面高の70%を占める縦長レイアウトにする。
@@ -82,9 +88,10 @@ class CalendarScreen extends ConsumerWidget {
                 ),
               ),
               // カレンダーゾーンと下部セクションの区切り線（mockの.calendarZone:after）
+              // 横マージンはmockの16px × 1.37 dp換算。
               Container(
                 height: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 16),
+                margin: const EdgeInsets.symmetric(horizontal: 22),
                 color: const Color(0xFFEEF1F6),
               ),
               const SizedBox(height: 16),
