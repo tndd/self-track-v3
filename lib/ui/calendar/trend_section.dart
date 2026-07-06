@@ -181,6 +181,10 @@ class TrendSection extends StatelessWidget {
                       titlesData: const FlTitlesData(show: false),
                       borderData: FlBorderData(show: false),
                       lineTouchData: const LineTouchData(enabled: false),
+                      // 描画をチャート枠内にクリップする。未設定だと
+                      // 両端の点や曲線が枠の外へわずかにはみ出し、
+                      // 上のタイトルバーの幅を超えて見えてしまう。
+                      clipData: const FlClipData.all(),
                       extraLinesData: ExtraLinesData(
                         horizontalLines: [
                           if (showBaseline)
@@ -210,6 +214,9 @@ class TrendSection extends StatelessWidget {
                         LineChartBarData(
                           spots: spots,
                           isCurved: true,
+                          // 曲線補間が両端点の外側へオーバーシュートして
+                          // 枠をはみ出さないようにする。
+                          preventCurveOverShooting: true,
                           // mockのpivotGradLine準拠: 基準線(普通=0)を境に
                           // 下は赤→橙、上は緑→青の縦グラデーションで塗る。
                           // 境界位置は動的レンジ内の基準線の高さに追従する。
