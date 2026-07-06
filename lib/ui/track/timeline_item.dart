@@ -75,11 +75,8 @@ class TimelineItem extends StatelessWidget {
                               backgroundColor: level.color,
                               child: Text(
                                 '${level.uiValue}',
-                                style: TextStyle(
-                                  // mockでは普通（グレー円）のみ濃色数字、他は白。
-                                  color: level == ConditionLevel.normal
-                                      ? const Color(0xFF111827)
-                                      : Colors.white,
+                                style: const TextStyle(
+                                  color: Colors.white,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w800,
                                 ),

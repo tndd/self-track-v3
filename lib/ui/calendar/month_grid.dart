@@ -153,11 +153,7 @@ class _DayCell extends StatelessWidget {
                             // 表示はUI値スケール(1〜5)。DB値(-2〜2)から変換する。
                             (score + 3).toStringAsFixed(1),
                             style: TextStyle(
-                              // モック案2準拠: グレー(普通)の円だけ白文字だと
-                              // 視認性が落ちるため濃色文字にする。
-                              color: level == ConditionLevel.normal
-                                  ? const Color(0xFF111827)
-                                  : Colors.white,
+                              color: Colors.white,
                               // 円の直径に比例させる(直径30pxで10pt相当)。
                               fontSize: diameter / 3,
                               fontWeight: FontWeight.w800,
