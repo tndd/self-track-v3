@@ -1,0 +1,3439 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>self-track-v3 フロントエンド仕様書 & インタラクティブモックアップ</title>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;700;850&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* Light Mode Variables */
+  --bg-app: #f1f5f9;
+  --bg-device-area: #e2e8f0;
+  --bg-spec-area: #ffffff;
+  --bg-phone: #ffffff;
+  --bg-phone-screen: #f8fafc;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-color: #cbd5e1;
+  --border-phone-screen: #e2e8f0;
+  
+  /* Spec Panel Specifics */
+  --bg-spec-pre: #f8fafc;
+  --border-spec-pre: #e2e8f0;
+  --text-spec-code: #0f172a;
+  --bg-highlight: #eff6ff;
+  --border-highlight: #3b82f6;
+
+  /* App Specific Colors (5 Levels of Condition) */
+  --score-1: #ef4444; /* 最悪 */
+  --score-2: #f97316; /* 悪い */
+  --score-3: #94a3b8; /* 普通 */
+  --score-4: #22c55e; /* 良い */
+  --score-5: #3b82f6; /* 最高 */
+
+  /* Tag Colors */
+  --tag-symptom-bg: #ffe4e6;
+  --tag-symptom-text: #be123c;
+  --tag-action-bg: #dcfce7;
+  --tag-action-text: #15803d;
+  --tag-factor-bg: #f3e8ff;
+  --tag-factor-text: #7e22ce;
+  --tag-default-bg: #e2e8f0;
+  --tag-default-text: #475569;
+
+  /* UI Interactive States */
+  --transition-speed: 0.3s;
+  --shadow-premium: 0 20px 40px -15px rgba(0,0,0,0.1);
+  --shadow-phone: 0 25px 60px -15px rgba(15,23,42,0.3);
+}
+
+[data-theme="dark"] {
+  /* Dark Mode Variables */
+  --bg-app: #0b0f19;
+  --bg-device-area: #1e293b;
+  --bg-spec-area: #0f172a;
+  --bg-phone: #0f172a;
+  --bg-phone-screen: #020617;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border-color: #334155;
+  --border-phone-screen: #1e293b;
+
+  /* Spec Panel Specifics */
+  --bg-spec-pre: #1e293b;
+  --border-spec-pre: #334155;
+  --text-spec-code: #f8fafc;
+  --bg-highlight: #172554;
+  --border-highlight: #3b82f6;
+
+  --score-3: #475569; /* ダークモード用の普通は少し暗めに */
+
+  /* Tag Colors (Darker variant) */
+  --tag-symptom-bg: #4c0519;
+  --tag-symptom-text: #fda4af;
+  --tag-action-bg: #052e16;
+  --tag-action-text: #86efac;
+  --tag-factor-bg: #2e1065;
+  --tag-factor-text: #d8b4fe;
+  --tag-default-bg: #1e293b;
+  --tag-default-text: #cbd5e1;
+
+  --shadow-premium: 0 20px 40px -15px rgba(0,0,0,0.4);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text-main);
+  background-color: var(--bg-app);
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  transition: background-color var(--transition-speed), color var(--transition-speed);
+}
+
+/* --- Layout --- */
+#app-container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+
+/* Left Side: Mockup Frame Space */
+#mockup-viewport {
+  flex: 0 0 480px;
+  background-color: var(--bg-device-area);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background-color var(--transition-speed);
+}
+
+/* Right Side: Specification Text Area */
+#spec-panel {
+  flex: 1;
+  background-color: var(--bg-spec-area);
+  overflow-y: auto;
+  padding: 40px;
+  scroll-behavior: smooth;
+  transition: background-color var(--transition-speed);
+}
+
+/* Toggle Control Header */
+.spec-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 20px;
+  margin-bottom: 30px;
+}
+
+.spec-title-group h1 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 24px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+}
+.spec-title-group p {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.theme-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px 16px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background var(--transition-speed), border-color var(--transition-speed);
+}
+.theme-toggle-btn:hover {
+  background: var(--bg-app);
+}
+
+/* --- Smartphone Device Frame (Premium style) --- */
+.phone-container {
+  width: 320px;
+  height: 660px;
+  background-color: #000000;
+  border-radius: 40px;
+  padding: 10px;
+  box-shadow: var(--shadow-phone);
+  position: relative;
+  border: 4px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Dynamic Island / Notch */
+.phone-notch {
+  position: absolute;
+  top: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 25px;
+  background-color: #000000;
+  border-radius: 15px;
+  z-index: 99;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.phone-notch::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  background: #111;
+  border-radius: 50%;
+}
+.phone-notch::after {
+  content: "";
+  width: 5px;
+  height: 5px;
+  background: #1c1c1e;
+  border-radius: 50%;
+}
+
+.phone-screen {
+  width: 100%;
+  height: 100%;
+  background-color: var(--bg-phone-screen);
+  border-radius: 32px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-phone-screen);
+  user-select: none;
+}
+
+/* --- App Shell & Navigator --- */
+.app-header {
+  flex: 0 0 auto;
+  padding: 35px 16px 12px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-phone-screen);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: background-color var(--transition-speed);
+}
+[data-theme="dark"] .app-header {
+  background: rgba(15, 23, 42, 0.85);
+}
+
+.app-title-block {
+  flex: 1;
+  margin-left: 8px;
+}
+.app-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: -0.03em;
+}
+.app-subtitle {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-main);
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+}
+.icon-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+[data-theme="dark"] .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Drawer / Hamburger Menu overlay */
+.drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 90;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.drawer-overlay.active {
+  display: block;
+  opacity: 1;
+}
+
+.drawer {
+  position: absolute;
+  top: 0;
+  left: -240px;
+  width: 240px;
+  height: 100%;
+  background: var(--bg-phone);
+  z-index: 91;
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.15);
+  transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  padding: 45px 16px 20px;
+}
+.drawer.active {
+  left: 0;
+}
+
+.drawer-header {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 850;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-phone-screen);
+  margin-bottom: 20px;
+}
+
+.drawer-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  color: var(--text-main);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+}
+.drawer-menu-item:hover, .drawer-menu-item.active {
+  background: var(--bg-phone-screen);
+  color: #3b82f6;
+}
+
+/* Content Frame */
+.screen-content {
+  flex: 1;
+  overflow-y: auto;
+  position: relative;
+  scrollbar-width: none;
+  display: flex;
+  flex-direction: column;
+}
+.screen-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Bottom Sheet Scrim & Panel */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.3);
+  z-index: 40;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.scrim.active {
+  display: block;
+  opacity: 1;
+}
+
+/* --- Common UI Components inside Mock --- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  margin: 2px;
+  white-space: nowrap;
+}
+.chip.symptom { background: var(--tag-symptom-bg); color: var(--tag-symptom-text); }
+.chip.action { background: var(--tag-action-bg); color: var(--tag-action-text); }
+.chip.factor { background: var(--tag-factor-bg); color: var(--tag-factor-text); }
+.chip.default { background: var(--tag-default-bg); color: var(--tag-default-text); }
+
+.score-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-weight: 850;
+  color: #fff;
+  font-size: 11px;
+}
+.score-badge.s1 { background: var(--score-1); }
+.score-badge.s2 { background: var(--score-2); }
+.score-badge.s3 { background: var(--score-3); color: var(--text-main); }
+.score-badge.s4 { background: var(--score-4); }
+.score-badge.s5 { background: var(--score-5); }
+
+/* --- SCREEN 1: Track Screen --- */
+#screen-track { display: flex; }
+
+.timeline-list {
+  padding: 16px;
+  padding-bottom: 90px;
+}
+.tl-item {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.tl-time {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding-top: 6px;
+}
+.tl-body {
+  border-left: 2px solid var(--border-phone-screen);
+  padding-left: 12px;
+  position: relative;
+  min-height: 40px;
+}
+.tl-body::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-color);
+}
+.tl-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tl-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+.tl-comment {
+  font-size: 11.5px;
+  color: var(--text-main);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.tl-tags {
+  margin-top: 4px;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+/* Composer Panel (Seamless panel style) */
+.composer-wrap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px;
+  background: linear-gradient(180deg, rgba(248,250,252,0) 0%, var(--bg-phone-screen) 40%);
+  z-index: 30;
+}
+[data-theme="dark"] .composer-wrap {
+  background: linear-gradient(180deg, rgba(2,6,23,0) 0%, var(--bg-phone-screen) 40%);
+}
+
+.composer-bar {
+  background: var(--bg-phone);
+  border: 1px solid var(--border-phone-screen);
+  border-radius: 20px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.composer-bar-plus {
+  border: 0;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 24px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.composer-bar-input {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 2px;
+}
+.composer-bar-send {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--border-color);
+  color: var(--bg-phone);
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.composer-bar-send.active {
+  background: #3b82f6;
+  color: #fff;
+}
+
+/* Sliding Plus Panel */
+.plus-panel {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 60px;
+  background: var(--bg-phone);
+  border: 1px solid var(--border-phone-screen);
+  border-radius: 24px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+}
+.plus-panel.active {
+  display: flex;
+}
+.plus-panel.mini { height: auto; }
+.plus-panel.grow { height: 320px; }
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.panel-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+.tag-toggle-btn {
+  border: 0;
+  background: var(--text-main);
+  color: var(--bg-phone);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tag-toggle-btn.ghost {
+  background: var(--bg-phone-screen);
+  color: var(--text-muted);
+  border: 1px solid var(--border-phone-screen);
+}
+
+.composer-status-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.composer-status-pill {
+  border: 1px solid var(--border-phone-screen);
+  border-radius: 12px;
+  padding: 6px 0;
+  text-align: center;
+  background: var(--bg-phone);
+  font-size: 9px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-muted);
+}
+.composer-status-pill.selected {
+  border-color: var(--text-main);
+  background: var(--bg-phone-screen);
+  color: var(--text-main);
+}
+.composer-status-pill .pill-num {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  margin: 0 auto 4px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.composer-status-pill:nth-child(1) .pill-num { background: var(--score-1); }
+.composer-status-pill:nth-child(2) .pill-num { background: var(--score-2); }
+.composer-status-pill:nth-child(3) .pill-num { background: var(--score-3); color: var(--text-main); }
+.composer-status-pill:nth-child(4) .pill-num { background: var(--score-4); }
+.composer-status-pill:nth-child(5) .pill-num { background: var(--score-5); }
+
+/* Comment input inside plus panel */
+.composer-comment-input {
+  border: 1px solid var(--border-phone-screen);
+  background: var(--bg-phone-screen);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-main);
+  resize: none;
+  height: 48px;
+  margin-bottom: 10px;
+  outline: none;
+  font-family: inherit;
+}
+
+.composer-selected-tags {
+  display: flex;
+  flex-wrap: wrap;
+  max-height: 50px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+.composer-selected-tags .chip {
+  cursor: pointer;
+}
+.composer-selected-tags .chip::after {
+  content: " ×";
+  opacity: 0.6;
+}
+
+.composer-tag-selector {
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-phone-screen);
+  padding-top: 10px;
+  display: none;
+}
+.composer-tag-selector.active {
+  display: block;
+}
+.tag-selector-group {
+  margin-bottom: 12px;
+}
+.tag-selector-group-title {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.tag-selector-chips {
+  display: flex;
+  flex-wrap: wrap;
+}
+.tag-selector-chips .chip {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.tag-selector-chips .chip.disabled {
+  opacity: 0.4;
+}
+
+.composer-panel-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.panel-btn-submit {
+  background: #3b82f6;
+  color: white;
+  border: 0;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Long press action sheet */
+.action-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -150px;
+  background: var(--bg-phone);
+  border-top: 1px solid var(--border-phone-screen);
+  border-radius: 20px 20px 0 0;
+  padding: 16px;
+  z-index: 51;
+  box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.1);
+  transition: bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.action-sheet.active {
+  bottom: 0;
+}
+.action-sheet-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 6px;
+}
+.action-sheet-btn {
+  padding: 12px;
+  background: var(--bg-phone-screen);
+  border: 0;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  text-align: center;
+}
+.action-sheet-btn.danger {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.empty-state-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+}
+.empty-state-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+.empty-state-desc {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* --- SCREEN 2: Calendar Screen --- */
+#screen-calendar { display: none; }
+
+.cal-month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 12px 0 8px;
+}
+.cal-month-title {
+  font-size: 12px;
+  font-weight: 850;
+  color: var(--text-main);
+  min-width: 90px;
+  text-align: center;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  padding: 0 16px 12px;
+}
+.cal-grid-head {
+  text-align: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding-bottom: 6px;
+}
+.cal-grid-head:first-child { color: var(--score-1); }
+.cal-grid-head:last-child { color: var(--score-5); }
+
+.cal-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.04);
+}
+[data-theme="dark"] .cal-cell {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.cal-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 750;
+  color: var(--text-main);
+  position: relative;
+}
+.cal-dot.empty {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+.cal-dot.s1 { background: var(--score-1); color: #fff; }
+.cal-dot.s2 { background: var(--score-2); color: #fff; }
+.cal-dot.s3 { background: var(--score-3); }
+.cal-dot.s4 { background: var(--score-4); color: #fff; }
+.cal-dot.s5 { background: var(--score-5); color: #fff; }
+
+/* Ring for multi-entries */
+.cal-dot.ring {
+  background: transparent;
+}
+.cal-dot.ring .ring-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.cal-dot.ring .ring-hole {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: var(--bg-phone-screen);
+}
+.cal-dot.ring .day-num {
+  position: relative;
+  z-index: 2;
+}
+
+.cal-bottom-stats {
+  padding: 16px;
+  border-top: 1px solid var(--border-phone-screen);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.cal-section-title {
+  background: var(--bg-phone);
+  border: 1px solid var(--border-phone-screen);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+  width: fit-content;
+  text-transform: uppercase;
+}
+
+/* Donut Area */
+.donut-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.donut-chart-container {
+  position: relative;
+  width: 70px;
+  height: 70px;
+}
+.donut-svg {
+  transform: rotate(-90deg);
+}
+.donut-center-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.donut-avg-val {
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 850;
+  line-height: 1;
+}
+.donut-avg-lbl {
+  font-size: 7px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.donut-legend {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 8px;
+  font-weight: 600;
+}
+.legend-color {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.cal-trend-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.trend-header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.trend-main-val {
+  font-size: 16px;
+  font-weight: 850;
+}
+.trend-change-badge {
+  font-size: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+.trend-change-badge.up { background: #dcfce7; color: #15803d; }
+.trend-change-badge.down { background: #fee2e2; color: #ef4444; }
+
+.trend-sparkline-svg {
+  width: 100%;
+  height: 55px;
+  stroke-linecap: round;
+}
+.trend-sparkline-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: var(--text-muted);
+}
+
+/* --- SCREEN 3: Stats Screen --- */
+#screen-stats { display: none; }
+
+.stats-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 40px;
+}
+
+.stats-card {
+  background: var(--bg-phone);
+  border: 1px solid var(--border-phone-screen);
+  border-radius: 16px;
+  padding: 12px;
+}
+.stats-card-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.stats-chart-placeholder {
+  width: 100%;
+  height: 100px;
+}
+
+/* Selector inside stats card */
+.stats-selector {
+  width: 100%;
+  padding: 6px;
+  font-size: 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-phone-screen);
+  background: var(--bg-phone-screen);
+  color: var(--text-main);
+  outline: none;
+  margin-bottom: 10px;
+}
+
+/* Association lists */
+.assoc-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-phone-screen);
+}
+.assoc-item:last-child {
+  border-bottom: 0;
+}
+.assoc-tags {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.assoc-tag-arrow {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.assoc-metrics {
+  text-align: right;
+}
+.assoc-lift {
+  font-size: 12px;
+  font-weight: 800;
+  color: #10b981;
+}
+.assoc-lift.negative {
+  color: #ef4444;
+}
+.assoc-details {
+  font-size: 8px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* --- SCREEN 4: Tags Screen --- */
+#screen-tags { display: none; }
+
+.tags-content {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tags-btn-add {
+  background: #3b82f6;
+  color: white;
+  border: 0;
+  padding: 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.2);
+}
+
+.tag-list-card {
+  background: var(--bg-phone);
+  border: 1px solid var(--border-phone-screen);
+  border-radius: 16px;
+  padding: 12px;
+}
+.tag-list-card-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.tag-grid-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.tag-grid-list .chip {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tag-grid-list .chip.archived {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+/* Tag Form Overlay */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 80;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.active {
+  display: flex;
+}
+.modal-card {
+  width: 100%;
+  background: var(--bg-phone);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.modal-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 850;
+}
+.modal-input {
+  border: 1px solid var(--border-phone-screen);
+  background: var(--bg-phone-screen);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-main);
+  outline: none;
+  font-family: inherit;
+}
+.modal-select {
+  border: 1px solid var(--border-phone-screen);
+  background: var(--bg-phone-screen);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-main);
+  outline: none;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+.modal-btn {
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 0;
+}
+.modal-btn.cancel {
+  background: var(--bg-phone-screen);
+  color: var(--text-main);
+  border: 1px solid var(--border-phone-screen);
+}
+.modal-btn.save {
+  background: #3b82f6;
+  color: white;
+}
+.modal-btn.archive {
+  background: var(--score-2);
+  color: white;
+}
+.modal-btn.unarchive {
+  background: var(--score-4);
+  color: white;
+}
+
+/* --- SCREEN 5: Settings Screen --- */
+#screen-settings { display: none; }
+
+.settings-list {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.settings-group {
+  background: var(--bg-phone);
+  border: 1px solid var(--border-phone-screen);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-phone-screen);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--transition-speed);
+}
+.settings-item:last-child {
+  border-bottom: 0;
+}
+.settings-item:hover {
+  background: var(--bg-phone-screen);
+}
+.settings-item.danger {
+  color: #ef4444;
+}
+.settings-val {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* --- RIGHT SIDE: Spec Panel Styles --- */
+.spec-section {
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.spec-section.active {
+  display: block;
+  opacity: 1;
+}
+
+/* Rich markdown styles for Spec Document */
+.spec-section h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 26px;
+  font-weight: 850;
+  color: var(--text-main);
+  margin-bottom: 16px;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.spec-section h2 span.section-badge {
+  font-size: 12px;
+  background: #3b82f6;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.spec-section h3 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 24px 0 10px;
+}
+
+.spec-section p {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: var(--text-main);
+  margin-bottom: 16px;
+}
+
+.spec-section ul {
+  margin-bottom: 16px;
+  padding-left: 20px;
+}
+.spec-section li {
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+
+/* GitHub style alerts */
+.alert-box {
+  border-left: 4px solid #cbd5e1;
+  background-color: var(--bg-spec-pre);
+  padding: 12px 16px;
+  margin: 16px 0;
+  border-radius: 0 8px 8px 0;
+}
+.alert-box.important {
+  border-left-color: #3b82f6;
+  background-color: rgba(59, 130, 246, 0.05);
+}
+.alert-box.warning {
+  border-left-color: #f97316;
+  background-color: rgba(249, 115, 22, 0.05);
+}
+.alert-title {
+  font-size: 12px;
+  font-weight: 750;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* State definition table */
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 24px;
+  font-size: 13.5px;
+}
+.spec-table th, .spec-table td {
+  border: 1px solid var(--border-color);
+  padding: 10px 12px;
+  text-align: left;
+}
+.spec-table th {
+  background: var(--bg-spec-pre);
+  font-weight: 700;
+}
+.spec-table tr.highlighted {
+  background: var(--bg-highlight);
+  border-left: 3px solid var(--border-highlight);
+}
+
+.code-block {
+  font-family: 'Fira Code', monospace;
+  font-size: 12.5px;
+  background: var(--bg-spec-pre);
+  border: 1px solid var(--border-spec-pre);
+  color: var(--text-spec-code);
+  padding: 14px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 14px 0;
+  line-height: 1.5;
+}
+
+/* Highlights when interaction happens */
+.spec-highlight-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--bg-spec-area);
+  margin-top: 20px;
+  box-shadow: var(--shadow-premium);
+}
+.spec-highlight-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #3b82f6;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* --- Responsive Layout --- */
+@media (max-width: 960px) {
+  body {
+    flex-direction: column;
+    overflow-y: auto;
+    height: auto;
+  }
+  #app-container {
+    flex-direction: column;
+    height: auto;
+  }
+  #mockup-viewport {
+    flex: 0 0 auto;
+    width: 100%;
+    padding: 30px 10px;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border-color);
+  }
+  #spec-panel {
+    flex: 1;
+    overflow-y: visible;
+    padding: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div id="app-container">
+  
+  <!-- LEFT: Interactive Device Mockup -->
+  <div id="mockup-viewport">
+    
+    <div class="phone-container">
+      <!-- Notch / Dynamic Island -->
+      <div class="phone-notch"></div>
+      
+      <!-- Inside Screen -->
+      <div class="phone-screen">
+        
+        <!-- App Header (Dynamic) -->
+        <header class="app-header">
+          <button class="icon-btn" id="header-menu-btn">☰</button>
+          <div class="app-title-block">
+            <div class="app-title" id="app-header-title">Today</div>
+            <div class="app-subtitle" id="app-header-subtitle">7月11日 土曜</div>
+          </div>
+          <button class="icon-btn" id="header-action-btn" style="font-size: 16px;">🔍</button>
+        </header>
+
+        <!-- Drawer Navigation -->
+        <div class="drawer-overlay" id="drawer-overlay"></div>
+        <nav class="drawer" id="app-drawer">
+          <div class="drawer-header">self-track-v3</div>
+          <div class="drawer-menu-item active" data-screen="track">
+            <span>📝</span> Track (体調記録)
+          </div>
+          <div class="drawer-menu-item" data-screen="calendar">
+            <span>📅</span> Calendar (カレンダー)
+          </div>
+          <div class="drawer-menu-item" data-screen="stats">
+            <span>📊</span> Stats (統計分析)
+          </div>
+          <div class="drawer-menu-item" data-screen="tags">
+            <span>🏷️</span> Tags (タグ管理)
+          </div>
+          <div class="drawer-menu-item" data-screen="settings">
+            <span>⚙️</span> Settings (設定)
+          </div>
+        </nav>
+
+        <!-- Scrim for modal states -->
+        <div class="scrim" id="scrim"></div>
+
+        <!-- SCREEN: TRACK -->
+        <div class="screen-content" id="screen-track">
+          <!-- Timeline list of records -->
+          <div class="timeline-list" id="track-timeline">
+            <!-- Dynamically injected -->
+          </div>
+
+          <!-- Bottom bar composer -->
+          <div class="composer-wrap">
+            <div class="composer-bar" id="composer-trigger-btn">
+              <button class="composer-bar-plus">+</button>
+              <div class="composer-bar-input">体調やタグを記録...</div>
+              <button class="composer-bar-send">↑</button>
+            </div>
+          </div>
+
+          <!-- sliding sheet panel -->
+          <div class="plus-panel mini" id="composer-panel">
+            <div class="panel-header">
+              <span class="panel-title" id="composer-panel-title">体調を記録</span>
+              <button class="tag-toggle-btn" id="composer-tag-toggle-btn">タグを追加</button>
+            </div>
+            
+            <!-- Status levels -->
+            <div class="composer-status-strip">
+              <div class="composer-status-pill" data-score="-2">
+                <span class="pill-num">1</span>最悪
+              </div>
+              <div class="composer-status-pill" data-score="-1">
+                <span class="pill-num">2</span>悪い
+              </div>
+              <div class="composer-status-pill selected" data-score="0">
+                <span class="pill-num">3</span>普通
+              </div>
+              <div class="composer-status-pill" data-score="1">
+                <span class="pill-num">4</span>良い
+              </div>
+              <div class="composer-status-pill" data-score="2">
+                <span class="pill-num">5</span>最高
+              </div>
+            </div>
+
+            <!-- Selected Chips in panel -->
+            <div class="composer-selected-tags" id="composer-selected-tags">
+              <!-- JS Injected chips -->
+            </div>
+
+            <!-- Comment Input -->
+            <textarea class="composer-comment-input" id="composer-comment" placeholder="今の気分やメモを記入..."></textarea>
+
+            <!-- Expanded Tag selection area -->
+            <div class="composer-tag-selector" id="composer-tag-selector">
+              <!-- Dynamically populated from JS -->
+            </div>
+
+            <div class="composer-panel-footer">
+              <button class="panel-btn-submit" id="composer-submit-btn">記録する</button>
+            </div>
+          </div>
+
+          <!-- Long press action menu sheet -->
+          <div class="action-sheet" id="track-action-sheet">
+            <div class="action-sheet-title" id="action-sheet-title">記録の操作</div>
+            <button class="action-sheet-btn" id="action-sheet-edit-btn">編集</button>
+            <button class="action-sheet-btn danger" id="action-sheet-delete-btn">削除</button>
+          </div>
+
+        </div>
+
+        <!-- SCREEN: CALENDAR -->
+        <div class="screen-content" id="screen-calendar">
+          <div class="cal-month-nav">
+            <button class="icon-btn" id="cal-prev-btn">‹</button>
+            <span class="cal-month-title" id="cal-month-title">2026年7月</span>
+            <button class="icon-btn" id="cal-next-btn">›</button>
+          </div>
+          
+          <div class="cal-grid" id="calendar-grid">
+            <div class="cal-grid-head">日</div>
+            <div class="cal-grid-head">月</div>
+            <div class="cal-grid-head">火</div>
+            <div class="cal-grid-head">水</div>
+            <div class="cal-grid-head">木</div>
+            <div class="cal-grid-head">金</div>
+            <div class="cal-grid-head">土</div>
+            <!-- Cells injected by JS -->
+          </div>
+
+          <div class="cal-bottom-stats">
+            <div class="cal-section-title">今月の割合</div>
+            <div class="donut-row">
+              <div class="donut-chart-container">
+                <svg class="donut-svg" width="70" height="70" viewBox="0 0 36 36">
+                  <path class="donut-ring" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--border-phone-screen)" stroke-width="3"></path>
+                  <path class="donut-segment" id="donut-seg-1" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--score-1)" stroke-width="4.5" stroke-dasharray="0, 100" stroke-dashoffset="0"></path>
+                  <path class="donut-segment" id="donut-seg-2" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--score-2)" stroke-width="4.5" stroke-dasharray="0, 100" stroke-dashoffset="0"></path>
+                  <path class="donut-segment" id="donut-seg-3" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--score-3)" stroke-width="4.5" stroke-dasharray="0, 100" stroke-dashoffset="0"></path>
+                  <path class="donut-segment" id="donut-seg-4" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--score-4)" stroke-width="4.5" stroke-dasharray="0, 100" stroke-dashoffset="0"></path>
+                  <path class="donut-segment" id="donut-seg-5" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="var(--score-5)" stroke-width="4.5" stroke-dasharray="0, 100" stroke-dashoffset="0"></path>
+                </svg>
+                <div class="donut-center-text">
+                  <span class="donut-avg-val" id="donut-avg-val">3.0</span>
+                  <span class="donut-avg-lbl">平均</span>
+                </div>
+              </div>
+              <div class="donut-legend" id="donut-legend">
+                <!-- JS updates percents -->
+              </div>
+            </div>
+
+            <div class="cal-section-title">7日間の傾向</div>
+            <div class="cal-trend-card">
+              <div class="trend-header-row">
+                <span class="trend-main-val" id="trend-avg-val">2.8</span>
+                <span class="trend-change-badge" id="trend-change-badge">-</span>
+              </div>
+              <svg class="trend-sparkline-svg" id="trend-sparkline-svg" viewBox="0 0 280 60" fill="none">
+                <!-- Trend line path injected by JS -->
+              </svg>
+              <div class="trend-sparkline-labels" id="trend-sparkline-labels">
+                <!-- Labels -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN: STATS -->
+        <div class="screen-content" id="screen-stats">
+          <div class="stats-container">
+            <!-- 30 Days Trend -->
+            <div class="stats-card">
+              <div class="stats-card-title">30日間の体調推移</div>
+              <svg id="stats-trend-svg" width="100%" height="80" viewBox="0 0 280 80">
+                <!-- Injected line and points -->
+              </svg>
+            </div>
+
+            <!-- Single Tag Event Locked Average -->
+            <div class="stats-card">
+              <div class="stats-card-title">イベントロック平均 (前後12h)</div>
+              <select class="stats-selector" id="stats-event-locked-tag-select">
+                <!-- Tag Options loaded by JS -->
+              </select>
+              <svg id="stats-event-locked-svg" width="100%" height="80" viewBox="0 0 280 80">
+                <!-- Event Locked Line graph -->
+              </svg>
+            </div>
+
+            <!-- Tags Correlation Analysis -->
+            <div class="stats-card">
+              <div class="stats-card-title">行動と症状の関連度 (リフト値)</div>
+              <div id="stats-correlation-list">
+                <!-- Injected associations dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN: TAGS -->
+        <div class="screen-content" id="screen-tags">
+          <div class="tags-content">
+            <button class="tags-btn-add" id="tags-add-btn">+ 新しいタグを作成</button>
+            
+            <div class="tag-list-card">
+              <div class="tag-list-card-title">登録済みタグ</div>
+              <div class="tag-grid-list" id="tags-active-list">
+                <!-- Active tag chips -->
+              </div>
+            </div>
+
+            <div class="tag-list-card">
+              <div class="tag-list-card-title">アーカイブ済みタグ</div>
+              <div class="tag-grid-list" id="tags-archived-list">
+                <!-- Archived tag chips -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Tag Add/Edit Modal inside Device Screen -->
+          <div class="modal-overlay" id="tags-modal">
+            <div class="modal-card">
+              <div class="modal-title" id="tags-modal-title">新しいタグ</div>
+              <input type="text" class="modal-input" id="tags-modal-name" placeholder="タグの名称 (例: 頭痛、散歩)" />
+              <select class="modal-select" id="tags-modal-group">
+                <option value="症状">症状 (目的変数 y)</option>
+                <option value="薬">薬 (説明変数 x)</option>
+                <option value="サプリ">サプリ (説明変数 x)</option>
+                <option value="運動">運動 (説明変数 x)</option>
+                <option value="環境">環境 (説明変数 x)</option>
+              </select>
+              <div class="modal-actions">
+                <button class="modal-btn cancel" id="tags-modal-cancel">キャンセル</button>
+                <button class="modal-btn archive" id="tags-modal-archive" style="display:none">アーカイブ</button>
+                <button class="modal-btn unarchive" id="tags-modal-unarchive" style="display:none">アーカイブ解除</button>
+                <button class="modal-btn save" id="tags-modal-save">保存</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SCREEN: SETTINGS -->
+        <div class="screen-content" id="screen-settings">
+          <div class="settings-list">
+            <div class="settings-group">
+              <div class="settings-item">
+                <span>同期状態</span>
+                <span class="settings-val">ローカルのみ (未同期)</span>
+              </div>
+              <div class="settings-item">
+                <span>データベースバージョン</span>
+                <span class="settings-val">v1.0.0</span>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <div class="settings-item danger" id="settings-delete-all-btn">
+                <span>全データの消去</span>
+                <span>🗑️</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings Danger Confirm Dialog -->
+          <div class="modal-overlay" id="settings-confirm-modal">
+            <div class="modal-card">
+              <div class="modal-title" style="color:#ef4444;">本当に全消去しますか？</div>
+              <div style="font-size:11px; line-height:1.5; color: var(--text-muted);">
+                すべての記録とタグ、およびインメモリデータベースの状態が初期化されます。この操作は戻せません。
+              </div>
+              <div class="modal-actions">
+                <button class="modal-btn cancel" id="settings-confirm-cancel">やめる</button>
+                <button class="modal-btn save" id="settings-confirm-delete" style="background:#ef4444;">削除実行</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Specifications Document -->
+  <div id="spec-panel">
+    
+    <!-- Title & Controls -->
+    <div class="spec-header">
+      <div class="spec-title-group">
+        <h1>self-track-v3 フロントエンド仕様書</h1>
+        <p>画面モックアップと仕様定義が同居した生きたインタラクティブ仕様書</p>
+      </div>
+      <button class="theme-toggle-btn" id="theme-toggle">
+        <span id="theme-icon">🌙</span> Dark Mode
+      </button>
+    </div>
+
+    <!-- SPEC 0: OVERVIEW -->
+    <section class="spec-section active" id="spec-sec-overview">
+      <h2><span>📝</span> 全体概要 & パッシブ・トラッキング設計</h2>
+      <p>
+        本アプリケーションは、<strong>「ユーザーが行った能動的アクション」</strong>と<strong>「身体・精神的なコンディションの変化」</strong>の因果関係を、端末内（オンデバイス）で統計的に特定するための体調記録・分析アプリです。
+      </p>
+
+      <div class="alert-box important">
+        <div class="alert-title">💡 設計思想: 例外記録 (パッシブ・トラッキング)</div>
+        ユーザーに入力を強制しない設計を採用しています。「体調が良い時・悪い時」「特定の薬を飲んだ時」など、イベントが発生した際のみ記録します。未評価の時間は自動的に<strong>平常状態 (0)</strong> として扱われます。
+      </div>
+
+      <h3>本インタラクティブ仕様書の使いかた</h3>
+      <p>
+        左側のスマートフォンモックアップ内のメニュー(☰)から画面を切り替えると、この仕様書の表示セクションが現在操作中の画面に同期し、該当する画面状態やデータ構造の仕様がハイライト表示されます。
+      </p>
+      <p>
+        左側の画面は、JavaScriptで動く<strong>インメモリSQLite風DB</strong>で実際にCRUD操作が機能します。新しいタグの追加、レコードの記録、レコードの長押し削除などを行うと、カレンダーや統計の各数値・グラフに即座にフィードバックされます。ぜひお試しください。
+      </p>
+    </section>
+
+    <!-- SPEC 1: TRACK -->
+    <section class="spec-section" id="spec-sec-track">
+      <h2><span>📱</span> Track（体調記録画面）仕様 <span class="section-badge">M3 準拠</span></h2>
+      <p>
+        体調値 (5段階)、コメント、及びその瞬間に紐付く複数の行動/症状/環境タグを瞬時に記録・可視化するためのメイン画面です。
+      </p>
+
+      <h3>画面が持ち得る状態 (State)</h3>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th>状態名</th>
+            <th>説明</th>
+            <th>UI表示と遷移</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="state-track-timeline">
+            <td><strong>通常タイムライン状態</strong></td>
+            <td>当日の記録を時系列降順で並べる。</td>
+            <td>コメント、体調バッジ、付随タグを表示。</td>
+          </tr>
+          <tr id="state-track-plus-mini">
+            <td><strong>Composer展開時 (Status)</strong></td>
+            <td>下部の <code>+</code> ボタン、またはテキスト欄タップで展開。</td>
+            <td>体調値 (1〜5) を選択する最小ピルエリア。</td>
+          </tr>
+          <tr id="state-track-plus-tags">
+            <td><strong>Tag展開時 (Composer拡張)</strong></td>
+            <td>Composer内「タグを追加」を押下して展開。</td>
+            <td>最近使用したタグ及びグループ別アコーディオンが表示され、複数選択可能。</td>
+          </tr>
+          <tr id="state-track-action-sheet">
+            <td><strong>長押しアクションメニュー</strong></td>
+            <td>タイムラインの記録を長押ししてボトムシート表示。</td>
+            <td>誤操作防止。編集・削除を選択可能にする。</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>データとの紐付け</h3>
+      <p>
+        Composerで「記録する」を押した際、Drift を用いて以下のデータベース書き込みトランザクションが実行されます。
+      </p>
+      <div class="code-block">
+// Recordsテーブルへの新規インサート
+final recordId = uuid.v4();
+await db.recordsDao.insertRecord(
+  RecordsCompanion.insert(
+    id: recordId,
+    timestamp: DateTime.now(),
+    value: selectedValue, // -2 〜 2 の値
+    comment: Value(commentText),
+  )
+);
+
+// RecordTags（中間テーブル）への一括紐付け
+for (var tagId in selectedTagIds) {
+  await db.recordsDao.insertRecordTag(
+    RecordTagsCompanion.insert(
+      recordId: recordId,
+      tagId: tagId,
+      value: const Value(1.0), // v1.0 では 1.0 固定
+    )
+  );
+}
+      </div>
+
+      <div class="alert-box warning">
+        <div class="alert-title">⚠️ 注意: 物理削除の連動 (CASCADE)</div>
+        レコードを削除した際、関連する <code>record_tags</code> 中間データは外部キー制約 <code>ON DELETE CASCADE</code> によって自動的に削除されます。Tagsマスタは削除されずそのまま保持されます。
+      </div>
+    </section>
+
+    <!-- SPEC 2: CALENDAR -->
+    <section class="spec-section" id="spec-sec-calendar">
+      <h2><span>📅</span> Calendar（カレンダー画面）仕様 <span class="section-badge">M5 準拠</span></h2>
+      <p>
+        月単位で体調スコアの変化を大局的に捉えるための画面です。
+      </p>
+
+      <h3>1. 日次スコアの5段階丸めと多色リング</h3>
+      <ul>
+        <li><strong>単一レコードの日</strong>: そのレコードの体調値 (-2〜2) を 1〜5 のカラーでセルに塗りつぶします。</li>
+        <li><strong>複数レコードの日 / 積分計算日</strong>: 1日の平均体調値を台形公式 (AUC) で求め、その値を四捨五入して色を決定します。</li>
+        <li><strong>多色リング (Ring)</strong>: 1日に異なる属性のタグや大きく異なる体調の記録が複数ある場合、UIの表現力向上として、Conic Gradient を用いて周囲に複数の体調色を環状にグラデーション描画します（案3）。</li>
+      </ul>
+
+      <h3>2. 「今月の割合」ドーナツチャート</h3>
+      <p>
+        月次内の各体調スコア (1〜5) の日数をカウントし、その比率をSVGリングで描画します。中央には、その月の<b>AUC加重平均値 (UI表現: 1.0〜5.0)</b> を表示します。
+      </p>
+
+      <h3>3. 7日間の傾向 (スプライン曲線 & 基準線ピボット塗り)</h3>
+      <p>
+        直近7日の体調積分値の推移を表示します。中央の点線が「平常 (3=普通)」となっており、それより上の「良い・最高」状態は<b>青〜緑のグラデーション</b>、下の「悪い・最悪」状態は<b>オレンジ〜赤のグラデーション</b>で塗りつぶすことで、一目で今週のコンディションの良し悪しが感覚的に理解できるようにしています。
+      </p>
+
+      <div class="spec-highlight-card" id="cal-auc-explanation">
+        <div class="spec-highlight-title">🧮 台形公式 (Trapezoidal Rule) による日次積分</div>
+        <p>
+          1日の体調のトータル評価値は、単純な算術平均ではなく、時間差を考慮した<strong>台形積分 (AUC: Area Under the Curve)</strong> によって算出されます。
+        </p>
+        <div class="code-block">
+// JSによる簡易再現コード
+function getDailyAUC(points) {
+  let area = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    let dt = (points[i+1].t - points[i].t) / (24 * 3600 * 1000); // 1日を1.0とした時間比
+    let valAvg = (points[i].val + points[i+1].val) / 2;
+    area += valAvg * dt;
+  }
+  return area; // -2.0 〜 2.0 の連続値
+}
+        </div>
+      </div>
+    </section>
+
+    <!-- SPEC 3: STATS -->
+    <section class="spec-section" id="spec-sec-stats">
+      <h2><span>📊</span> Stats（統計分析画面）仕様 <span class="section-badge">M6 準拠</span></h2>
+      <p>
+        蓄積された時系列ログから、因果関係を示唆するシグナルを抽出して提示する画面です。
+      </p>
+
+      <h3>1. 12時間減衰 (Decay) アルゴリズム</h3>
+      <p>
+        自己評価が記録されない「平常時」のデータを正しく扱うため、12時間以上記録がない期間には<b>「値0 (平常) への収束仮想ポイント」</b>をメモリ上で仮想的に挿入し、積分や分析の偏りを防ぎます。
+      </p>
+
+      <h3>2. イベントロック平均 (Event-Locked Average)</h3>
+      <p>
+        特定のタグ（例: 「コーヒー」や「頭痛」）が発生した時間（T=0）を起点として、前後12時間における体調値の変動平均をスプライン曲線でプロットします。
+        「薬を服用した後に体調がどう戻っていくか」「睡眠不足のあとにどれくらい体調が悪化するか」などの時系列寄与を視覚的に特定できます。
+      </p>
+
+      <h3>3. 関連分析 (オッズ比 / Fisherの正確確率検定 / リフト値)</h3>
+      <p>
+        「行動タグ（x）」と「症状タグ（y）」が同日に発生する共起関係を2×2分割表を用いて評価します。
+      </p>
+      <table class="spec-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th>症状あり (y)</th>
+            <th>症状なし (y)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>行動あり (x)</strong></td>
+            <td>a (共起日)</td>
+            <td>b</td>
+          </tr>
+          <tr>
+            <td><strong>行動なし (x)</strong></td>
+            <td>c</td>
+            <td>d</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ul>
+        <li><strong>リフト値</strong>: P(症状|行動) / P(症状)。基準の1.0より高ければ、その行動をした日に症状が起きやすい傾向を示します。</li>
+        <li><strong>Fisher p値</strong>: サンプル数（N数）が極めて少ない個人データ環境に合わせ、漸近的検定（カイ二乗等）ではなく、周辺和固定の超幾何分布に基づいた<strong>Fisherの正確確率検定</strong>を自前実装してp値を計算し、信頼性を評価します。</li>
+      </ul>
+
+      <div class="alert-box important">
+        <div class="alert-title">📝 データ不足のハンドリング</div>
+        行動または症状の発生回数が合計3回未満の場合は、誤った解釈を防ぐため「データ不足」として計算値（リフト値）をマスクし、リスト下部に配置します。
+      </div>
+    </section>
+
+    <!-- SPEC 4: TAGS -->
+    <section class="spec-section" id="spec-sec-tags">
+      <h2><span>🏷️</span> Tags（タグ管理画面）仕様 <span class="section-badge">M2 準拠</span></h2>
+      <p>
+        記録に使用するタグを管理する画面です。タグは「行動」「症状」「要因・環境」といったグループごとに分類されます。
+      </p>
+
+      <h3>物理削除を廃した「アーカイブ」構造</h3>
+      <p>
+        ユーザーが誤ってタグを消した際、過去の記録（<code>record_tags</code>）の整合性を失わせないため、タグは<strong>物理削除ではなく論理削除（アーカイブ）</strong>処理を行います。
+      </p>
+      <ul>
+        <li><strong>アーカイブ状態のタグ (isArchived = true)</strong>:</li>
+        <ul>
+          <li>新規記録画面 (Composer) のタグサジェスト候補には出現しません。</li>
+          <li>過去のタイムライン履歴や、カレンダー、統計画面には引き続きタグデータが残って評価対象となります。</li>
+          <li>タグ管理画面の「アーカイブ済み」セクションからいつでも有効化（アーカイブ解除）に戻せます。</li>
+        </ul>
+      </ul>
+
+      <div class="code-block">
+// Tags テーブル定義 (Drift)
+class Tags extends Table {
+  TextColumn get id => text()();
+  TextColumn get name => text().unique()();
+  TextColumn get group => text().named('tag_group')(); // SQLiteの予約語回避のため
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+  
+  @override Set<Column> get primaryKey => {id};
+}
+      </div>
+    </section>
+
+    <!-- SPEC 5: SETTINGS -->
+    <section class="spec-section" id="spec-sec-settings">
+      <h2><span>⚙️</span> Settings（設定画面）仕様 <span class="section-badge">M7 準拠</span></h2>
+      <p>
+        アプリ全体の管理機能を提供します。v1.0 においては安全性を最優先した「全データの消去」のみを実装します。
+      </p>
+
+      <h3>全データ消去フロー</h3>
+      <p>
+        誤操作によるデータ消失を防ぐため、以下の2段階のモーダル確認フローを踏んでローカルDBをクリアします。
+      </p>
+      <ol>
+        <li>「全データの消去」ボタンをタップ。</li>
+        <li>警告モーダルが表示され、「本当に削除しますか？」に対し赤文字の「削除実行」をタップして初めてDB全レコード消去のトランザクションが走ります。</li>
+      </ol>
+      <p>
+        データ消去完了後、すべての画面がデータなしの「空状態（Empty State）」に切り替わり、クラッシュが発生しないように制御します。
+      </p>
+    </section>
+
+  </div>
+</div>
+
+<!-- Scripts for Simulation Engine -->
+<script>
+// --- Logger / Console helper ---
+function logState(msg) {
+  console.log(`[STATE] ${msg}`);
+}
+
+// --- Dynamic Dummy Data Storage (Simulating Drift Local SQLite DB) ---
+let DB = {
+  tags: [
+    { id: "t1", name: "頭痛", group: "症状", isArchived: false },
+    { id: "t2", name: "倦怠感", group: "症状", isArchived: false },
+    { id: "t3", name: "胃痛", group: "症状", isArchived: false },
+    { id: "t4", name: "眠気", group: "症状", isArchived: false },
+    { id: "t5", name: "吐き気", group: "症状", isArchived: false },
+    { id: "t6", name: "ロキソニン", group: "薬", isArchived: false },
+    { id: "t7", name: "胃薬", group: "薬", isArchived: false },
+    { id: "t8", name: "コーヒー", group: "サプリ", isArchived: false },
+    { id: "t9", name: "ビタミンD", group: "サプリ", isArchived: false },
+    { id: "t10", name: "散歩", group: "運動", isArchived: false },
+    { id: "t11", name: "ジム", group: "運動", isArchived: false },
+    { id: "t12", name: "睡眠不足", group: "環境", isArchived: false },
+    { id: "t13", name: "低気圧", group: "環境", isArchived: false },
+    { id: "t14", name: "仕事ストレス", group: "環境", isArchived: false },
+  ],
+  records: [],
+  record_tags: []
+};
+
+// Seed records for the past 30 days (July 2026 Focus)
+function seedDatabase() {
+  DB.records = [];
+  DB.record_tags = [];
+  
+  const now = new Date("2026-07-11T13:00:00");
+  
+  // Tag map for easy access
+  const getTagId = name => DB.tags.find(t => t.name === name).id;
+
+  // Let's create dummy logs
+  // 30 days back
+  for (let i = 30; i >= 0; i--) {
+    const dayDate = new Date(now.getTime() - i * 24 * 3600 * 1000);
+    const dayStr = dayDate.toISOString().split('T')[0];
+    
+    // We add 1 to 3 records per day, with some days empty
+    if (i === 15 || i === 22) continue; // Empty days for testing empty states
+
+    // Determinstic patterns for stats validity:
+    // Coffee (t8) is recorded on even days. If coffee is recorded, condition is generally higher.
+    // Low pressure (t13) or Sleep deprivation (t12) on some days. If low pressure, Headache (t1) is highly likely.
+    
+    const count = 1 + (i % 3); // 1, 2, or 3
+    for (let r = 0; r < count; r++) {
+      const recId = `r_${i}_${r}`;
+      const recTime = new Date(dayDate.getTime());
+      recTime.setHours(8 + r * 5, 10 * r, 0); // e.g. 08:00, 13:10, 18:20
+      
+      let val = 0;
+      let comment = "";
+      let tagsToLink = [];
+
+      // Determine values and tags to showcase correlation
+      if (i % 2 === 0) {
+        tagsToLink.push(getTagId("コーヒー"));
+        val += 1;
+      }
+      if (i % 4 === 0) {
+        tagsToLink.push(getTagId("散歩"));
+        val += 1;
+      }
+      if (i % 5 === 0) {
+        tagsToLink.push(getTagId("睡眠不足"));
+        tagsToLink.push(getTagId("倦怠感"));
+        val -= 1;
+      }
+      if (i % 3 === 0) {
+        tagsToLink.push(getTagId("低気圧"));
+        tagsToLink.push(getTagId("頭痛"));
+        val -= 2;
+        if (i % 2 === 0) {
+          // Took medicine
+          tagsToLink.push(getTagId("ロキソニン"));
+          val += 1; // improved
+        }
+      }
+
+      // Clamp value between -2 and 2
+      val = Math.max(-2, Math.min(2, val));
+      
+      // Comments
+      if (val >= 1) {
+        const goods = ["調子が良い", "体が軽い", "集中できている", "散歩が気持ちいい"];
+        comment = goods[r % goods.length];
+      } else if (val <= -1) {
+        const bads = ["頭痛がする", "少しだるい", "首が痛い", "気圧のせいか眠い"];
+        comment = bads[r % bads.length];
+      } else {
+        comment = "普通の状態";
+      }
+
+      DB.records.push({
+        id: recId,
+        timestamp: recTime,
+        comment: comment,
+        value: val
+      });
+
+      tagsToLink.forEach(tId => {
+        DB.record_tags.push({
+          record_id: recId,
+          tag_id: tId,
+          value: 1.0
+        });
+      });
+    }
+  }
+
+  // Sort by timestamp
+  DB.records.sort((a,b) => a.timestamp - b.timestamp);
+}
+
+// Initialize logFactorials for Fisher test
+const logFact = [];
+function initLogFact(maxN) {
+  logFact[0] = 0;
+  for (let i = 1; i <= maxN; i++) {
+    logFact[i] = logFact[i - 1] + Math.log(i);
+  }
+}
+initLogFact(1000);
+
+// Hypergeometric distribution probability
+function hypergeomProb(a, b, c, d) {
+  const n = a + b + c + d;
+  if (n === 0) return 1.0;
+  return Math.exp(
+    logFact[a+b] + logFact[c+d] + logFact[a+c] + logFact[b+d]
+    - logFact[n] - logFact[a] - logFact[b] - logFact[c] - logFact[d]
+  );
+}
+
+// Fisher's Exact Test (Two-sided)
+function fishersExactTest(a, b, c, d) {
+  const n = a + b + c + d;
+  if (n === 0) return 1.0;
+  const observedProb = hypergeomProb(a, b, c, d);
+  let pSum = 0;
+  
+  const row1 = a + b;
+  const col1 = a + c;
+  const minA = Math.max(0, row1 + col1 - n);
+  const maxA = Math.min(row1, col1);
+  
+  for (let i = minA; i <= maxA; i++) {
+    const curA = i;
+    const curB = row1 - i;
+    const curC = col1 - i;
+    const curD = n - curA - curB - curC;
+    const p = hypergeomProb(curA, curB, curC, curD);
+    if (p <= observedProb + 1e-9) {
+      pSum += p;
+    }
+  }
+  return Math.min(1.0, pSum);
+}
+
+// Generate condition points series including 12h-decay virtual points
+function generateSeriesWithDecay(records, rangeStart, rangeEnd) {
+  if (records.length === 0) return [];
+  
+  let series = [];
+  
+  // Add first point
+  series.push({ t: records[0].timestamp.getTime(), val: records[0].value });
+  
+  for (let i = 0; i < records.length - 1; i++) {
+    const cur = records[i];
+    const next = records[i+1];
+    const diff = next.timestamp.getTime() - cur.timestamp.getTime();
+    
+    series.push({ t: cur.timestamp.getTime(), val: cur.value });
+    
+    if (diff > 12 * 3600 * 1000) {
+      // Insert virtual point (value = 0) at cur + 12h
+      series.push({ t: cur.timestamp.getTime() + 12 * 3600 * 1000, val: 0 });
+    }
+  }
+  
+  // Add last point
+  const last = records[records.length - 1];
+  series.push({ t: last.timestamp.getTime(), val: last.value });
+  
+  // Check decay to rangeEnd
+  if (rangeEnd) {
+    const diffEnd = rangeEnd.getTime() - last.timestamp.getTime();
+    if (diffEnd > 12 * 3600 * 1000) {
+      series.push({ t: last.timestamp.getTime() + 12 * 3600 * 1000, val: 0 });
+      series.push({ t: rangeEnd.getTime(), val: 0 });
+    }
+  }
+  
+  // Sort and remove duplicates on same time
+  series.sort((a,b) => a.t - b.t);
+  
+  // Filter unique times
+  let uniqueSeries = [];
+  if (series.length > 0) {
+    uniqueSeries.push(series[0]);
+    for (let i = 1; i < series.length; i++) {
+      if (series[i].t !== series[i-1].t) {
+        uniqueSeries.push(series[i]);
+      }
+    }
+  }
+  
+  return uniqueSeries;
+}
+
+// Calculate daily score using Trapezoidal integration
+function calculateDailyScore(records, date) {
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
+  const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+  
+  // Find all records within this day
+  const dayRecords = records.filter(r => r.timestamp >= dayStart && r.timestamp <= dayEnd);
+  
+  // If no records at all, we look at the immediate preceding and succeeding record to interpolate
+  if (dayRecords.length === 0) {
+    const preceding = records.filter(r => r.timestamp < dayStart).pop();
+    const succeeding = records.find(r => r.timestamp > dayEnd);
+    
+    if (!preceding && !succeeding) return null; // No context at all
+    
+    // Check 12-hour decay from preceding
+    if (preceding) {
+      const decayTime = preceding.timestamp.getTime() + 12 * 3600 * 1000;
+      if (decayTime < dayStart.getTime()) {
+        return 0; // Already decayed to normal
+      }
+      // Linear interpolate between preceding and decay point
+      const ratio = (dayStart.getTime() - preceding.timestamp.getTime()) / (12 * 3600 * 1000);
+      const valAtStart = preceding.value * (1 - ratio);
+      return valAtStart; 
+    }
+    return 0;
+  }
+  
+  // Form points array for trapezoidal integration
+  let points = [];
+  
+  // 1. Estimate 00:00 starting value
+  let valStart = 0;
+  const preceding = records.filter(r => r.timestamp < dayStart).pop();
+  if (preceding) {
+    const decayTime = preceding.timestamp.getTime() + 12 * 3600 * 1000;
+    if (decayTime > dayStart.getTime()) {
+      const ratio = (dayStart.getTime() - preceding.timestamp.getTime()) / (12 * 3600 * 1000);
+      valStart = preceding.value * (1 - ratio);
+    }
+  } else if (dayRecords.length > 0) {
+    valStart = dayRecords[0].value;
+  }
+  points.push({ t: dayStart.getTime(), val: valStart });
+  
+  // 2. Add all daily records & virtual decay points inside day
+  for (let i = 0; i < dayRecords.length; i++) {
+    points.push({ t: dayRecords[i].timestamp.getTime(), val: dayRecords[i].value });
+    
+    // Check internal decay before next record
+    if (i < dayRecords.length - 1) {
+      const nextTime = dayRecords[i+1].timestamp.getTime();
+      const curTime = dayRecords[i].timestamp.getTime();
+      if (nextTime - curTime > 12 * 3600 * 1000) {
+        points.push({ t: curTime + 12 * 3600 * 1000, val: 0 });
+      }
+    }
+  }
+  
+  // 3. Estimate 24:00 ending value
+  let valEnd = 0;
+  const lastRecord = dayRecords[dayRecords.length - 1];
+  const succeeding = records.find(r => r.timestamp > dayEnd);
+  
+  if (succeeding) {
+    const nextRecTime = succeeding.timestamp.getTime();
+    const curTime = lastRecord.timestamp.getTime();
+    if (nextRecTime - curTime > 12 * 3600 * 1000) {
+      // Decays before next record
+      const decayTime = curTime + 12 * 3600 * 1000;
+      if (decayTime < dayEnd.getTime()) {
+        valEnd = 0;
+      } else {
+        const ratio = (dayEnd.getTime() - curTime) / (12 * 3600 * 1000);
+        valEnd = lastRecord.value * (1 - ratio);
+      }
+    } else {
+      // Interpolate between lastRecord and succeeding
+      const ratio = (dayEnd.getTime() - curTime) / (nextRecTime - curTime);
+      valEnd = lastRecord.value + (succeeding.value - lastRecord.value) * ratio;
+    }
+  } else {
+    // Decays after last record
+    const decayTime = lastRecord.timestamp.getTime() + 12 * 3600 * 1000;
+    if (decayTime < dayEnd.getTime()) {
+      valEnd = 0;
+    } else {
+      const ratio = (dayEnd.getTime() - lastRecord.timestamp.getTime()) / (12 * 3600 * 1000);
+      valEnd = lastRecord.value * (1 - ratio);
+    }
+  }
+  points.push({ t: dayEnd.getTime(), val: valEnd });
+  
+  // Sort points by time
+  points.sort((a,b) => a.t - b.t);
+  
+  // Integrate using Trapezoidal rule
+  let totalArea = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const dt = (points[i+1].t - points[i].t) / (24 * 3600 * 1000); // fraction of a day
+    const avgVal = (points[i].val + points[i+1].val) / 2;
+    totalArea += avgVal * dt;
+  }
+  
+  return totalArea;
+}
+
+// Convert DB condition (-2 to 2) to UI level (1 to 5)
+function dbToUiScore(val) {
+  if (val === null) return null;
+  return Math.round(val + 3);
+}
+
+// --- APPLICATION ENGINE ---
+
+let CURRENT_SCREEN = "track";
+let VIEW_DATE = new Date("2026-07-11"); // Active calendar & timeline date
+let SELECTED_TAGS = []; // Composer state
+let EDITING_RECORD_ID = null; // Hold record ID when long pressed
+
+function initApp() {
+  seedDatabase();
+  setupEventListeners();
+  renderApp();
+}
+
+function setupEventListeners() {
+  // Drawer Toggles
+  document.getElementById("header-menu-btn").onclick = () => toggleDrawer(true);
+  document.getElementById("drawer-overlay").onclick = () => toggleDrawer(false);
+  
+  // Drawer menu clicks
+  document.querySelectorAll(".drawer-menu-item").forEach(item => {
+    item.onclick = (e) => {
+      const targetScreen = e.currentTarget.getAttribute("data-screen");
+      switchScreen(targetScreen);
+      toggleDrawer(false);
+    };
+  });
+
+  // Theme Toggle
+  document.getElementById("theme-toggle").onclick = toggleTheme;
+
+  // Composer Toggles
+  document.getElementById("composer-trigger-btn").onclick = openComposer;
+  document.getElementById("scrim").onclick = closeAllOverlays;
+  document.getElementById("composer-tag-toggle-btn").onclick = toggleComposerTags;
+  
+  // Composer state selections
+  document.querySelectorAll(".composer-status-pill").forEach(pill => {
+    pill.onclick = (e) => {
+      document.querySelectorAll(".composer-status-pill").forEach(p => p.classList.remove("selected"));
+      e.currentTarget.classList.add("selected");
+      // Update send button state color
+      const val = parseInt(e.currentTarget.getAttribute("data-score"));
+      const sendBtn = document.querySelector(".composer-bar-send");
+      sendBtn.className = "composer-bar-send active";
+      sendBtn.style.background = `var(--score-${dbToUiScore(val)})`;
+    };
+  });
+
+  // Composer Submit
+  document.getElementById("composer-submit-btn").onclick = saveComposerRecord;
+
+  // Action sheet controls
+  document.getElementById("action-sheet-edit-btn").onclick = editRecord;
+  document.getElementById("action-sheet-delete-btn").onclick = deleteRecord;
+
+  // Calendar prev/next
+  document.getElementById("cal-prev-btn").onclick = () => adjustMonth(-1);
+  document.getElementById("cal-next-btn").onclick = () => adjustMonth(1);
+
+  // Stats selectors
+  document.getElementById("stats-event-locked-tag-select").onchange = (e) => {
+    renderEventLockedChart(e.target.value);
+  };
+
+  // Tag Manager Add Btn
+  document.getElementById("tags-add-btn").onclick = openTagAddModal;
+  document.getElementById("tags-modal-cancel").onclick = closeTagModal;
+  document.getElementById("tags-modal-save").onclick = saveTag;
+  document.getElementById("tags-modal-archive").onclick = () => archiveTag(true);
+  document.getElementById("tags-modal-unarchive").onclick = () => archiveTag(false);
+
+  // Settings erase
+  document.getElementById("settings-delete-all-btn").onclick = () => {
+    document.getElementById("settings-confirm-modal").classList.add("active");
+    document.getElementById("scrim").classList.add("active");
+  };
+  document.getElementById("settings-confirm-cancel").onclick = () => {
+    document.getElementById("settings-confirm-modal").classList.remove("active");
+    document.getElementById("scrim").classList.remove("active");
+  };
+  document.getElementById("settings-confirm-delete").onclick = clearAllDatabase;
+}
+
+// Switch between screens
+function switchScreen(screenId) {
+  CURRENT_SCREEN = screenId;
+  logState(`Switching screen to ${screenId}`);
+  
+  // Hide all screens
+  document.querySelectorAll(".screen-content").forEach(el => el.style.display = "none");
+  document.getElementById(`screen-${screenId}`).style.display = "flex";
+
+  // Highlight drawer item
+  document.querySelectorAll(".drawer-menu-item").forEach(item => {
+    if (item.getAttribute("data-screen") === screenId) {
+      item.classList.add("active");
+    } else {
+      item.classList.remove("active");
+    }
+  });
+
+  // Update headers
+  const headerTitle = document.getElementById("app-header-title");
+  const headerSubtitle = document.getElementById("app-header-subtitle");
+  
+  if (screenId === "track") {
+    headerTitle.innerText = isToday(VIEW_DATE) ? "Today" : formatDateJP(VIEW_DATE);
+    headerSubtitle.innerText = isToday(VIEW_DATE) ? formatDateJP(VIEW_DATE) + " 今日" : "過去日の閲覧";
+  } else if (screenId === "calendar") {
+    headerTitle.innerText = "Calendar";
+    headerSubtitle.innerText = "月次体調グラフと集計";
+  } else if (screenId === "stats") {
+    headerTitle.innerText = "Stats";
+    headerSubtitle.innerText = "体調の因果特定分析";
+  } else if (screenId === "tags") {
+    headerTitle.innerText = "Tags";
+    headerSubtitle.innerText = "タグマスタ管理";
+  } else if (screenId === "settings") {
+    headerTitle.innerText = "Settings";
+    headerSubtitle.innerText = "環境設定・全データ削除";
+  }
+
+  // Right Spec highlight synchronizer
+  document.querySelectorAll(".spec-section").forEach(sec => sec.classList.remove("active"));
+  const specTarget = document.getElementById(`spec-sec-${screenId}`);
+  if (specTarget) {
+    specTarget.classList.add("active");
+    document.getElementById("spec-panel").scrollTop = specTarget.offsetTop - 50;
+  }
+
+  renderApp();
+}
+
+function toggleDrawer(open) {
+  const drawer = document.getElementById("app-drawer");
+  const overlay = document.getElementById("drawer-overlay");
+  if (open) {
+    drawer.classList.add("active");
+    overlay.classList.add("active");
+  } else {
+    drawer.classList.remove("active");
+    overlay.classList.remove("active");
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = document.documentElement.getAttribute("data-theme");
+  const newTheme = currentTheme === "dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", newTheme);
+  
+  const icon = document.getElementById("theme-icon");
+  const text = document.getElementById("theme-toggle");
+  
+  if (newTheme === "dark") {
+    icon.innerText = "☀️";
+    text.innerHTML = `☀️ Light Mode`;
+  } else {
+    icon.innerText = "🌙";
+    text.innerHTML = `🌙 Dark Mode`;
+  }
+  renderApp(); // Redraw canvases/svg lines to respect styles
+}
+
+// Open Composer Sheet overlay
+function openComposer() {
+  document.getElementById("composer-panel").classList.add("active");
+  document.getElementById("scrim").classList.add("active");
+  
+  // Highlight state text in spec
+  const specStateEl = document.getElementById("state-track-plus-mini");
+  if (specStateEl) {
+    document.querySelectorAll(".spec-table tr").forEach(tr => tr.classList.remove("highlighted"));
+    specStateEl.classList.add("highlighted");
+  }
+  
+  renderComposerTagSelector();
+}
+
+function toggleComposerTags() {
+  const selector = document.getElementById("composer-tag-selector");
+  const panel = document.getElementById("composer-panel");
+  const toggleBtn = document.getElementById("composer-tag-toggle-btn");
+  
+  if (selector.classList.contains("active")) {
+    selector.classList.remove("active");
+    panel.className = "plus-panel mini active";
+    toggleBtn.classList.remove("ghost");
+    toggleBtn.innerText = "タグを追加";
+  } else {
+    selector.classList.add("active");
+    panel.className = "plus-panel grow active";
+    toggleBtn.classList.add("ghost");
+    toggleBtn.innerText = "タグ表示中";
+
+    // Highlight state text in spec
+    const specStateEl = document.getElementById("state-track-plus-tags");
+    if (specStateEl) {
+      document.querySelectorAll(".spec-table tr").forEach(tr => tr.classList.remove("highlighted"));
+      specStateEl.classList.add("highlighted");
+    }
+  }
+}
+
+function closeAllOverlays() {
+  document.getElementById("composer-panel").classList.remove("active");
+  document.getElementById("track-action-sheet").classList.remove("active");
+  document.getElementById("tags-modal").classList.remove("active");
+  document.getElementById("settings-confirm-modal").classList.remove("active");
+  document.getElementById("scrim").classList.remove("active");
+  document.querySelectorAll(".spec-table tr").forEach(tr => tr.classList.remove("highlighted"));
+  EDITING_RECORD_ID = null;
+}
+
+// --- RENDERING CORE ---
+
+function renderApp() {
+  if (CURRENT_SCREEN === "track") {
+    renderTrackTimeline();
+  } else if (CURRENT_SCREEN === "calendar") {
+    renderCalendar();
+  } else if (CURRENT_SCREEN === "stats") {
+    renderStats();
+  } else if (CURRENT_SCREEN === "tags") {
+    renderTagsScreen();
+  }
+}
+
+// --- TRACK SCREEN LOGIC ---
+
+function renderTrackTimeline() {
+  const container = document.getElementById("track-timeline");
+  container.innerHTML = "";
+
+  // Filter records for active date
+  const dayStart = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), 0, 0, 0);
+  const dayEnd = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), 23, 59, 59);
+  
+  const dailyRecs = DB.records.filter(r => r.timestamp >= dayStart && r.timestamp <= dayEnd)
+    .sort((a,b) => b.timestamp - a.timestamp); // reverse chron for timeline
+
+  if (dailyRecs.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-state-icon">📝</span>
+        <span class="empty-state-title">記録がありません</span>
+        <span class="empty-state-desc">平常(普通)の一日として評価されます。体調に変化があった際や薬の服用などを記録しましょう。</span>
+      </div>
+    `;
+    return;
+  }
+
+  dailyRecs.forEach(rec => {
+    // Get tags for this record
+    const linkTags = DB.record_tags.filter(rt => rt.record_id === rec.id)
+      .map(rt => DB.tags.find(t => t.id === rt.tag_id))
+      .filter(Boolean);
+
+    const tlItem = document.createElement("div");
+    tlItem.className = "tl-item";
+    
+    // Double click or long press to trigger bottom sheet
+    let pressTimer;
+    tlItem.onmousedown = () => {
+      pressTimer = window.setTimeout(() => {
+        openActionSheet(rec.id);
+      }, 500);
+    };
+    tlItem.onmouseup = () => clearTimeout(pressTimer);
+    tlItem.onclick = () => {
+      // Normal click
+    };
+    
+    // Add double click as backup
+    tlItem.ondblclick = () => openActionSheet(rec.id);
+
+    const timeStr = rec.timestamp.toTimeString().substring(0, 5);
+    const scoreUi = dbToUiScore(rec.value);
+    
+    let label = "普通";
+    if (rec.value === -2) label = "最悪";
+    if (rec.value === -1) label = "悪い";
+    if (rec.value === 1) label = "良い";
+    if (rec.value === 2) label = "最高";
+
+    let tagChips = "";
+    linkTags.forEach(t => {
+      let groupClass = "default";
+      if (t.group === "症状") groupClass = "symptom";
+      if (t.group === "薬") groupClass = "action";
+      if (t.group === "サプリ") groupClass = "action";
+      if (t.group === "環境") groupClass = "factor";
+      tagChips += `<span class="chip ${groupClass}">${t.name}</span>`;
+    });
+
+    tlItem.innerHTML = `
+      <div class="tl-time">${timeStr}</div>
+      <div class="tl-body">
+        <div class="tl-row">
+          <span class="score-badge s${scoreUi}">${scoreUi}</span>
+          <span class="tl-label">${label}</span>
+        </div>
+        ${rec.comment ? `<div class="tl-comment">${rec.comment}</div>` : ""}
+        ${tagChips ? `<div class="tl-tags">${tagChips}</div>` : ""}
+      </div>
+    `;
+    container.appendChild(tlItem);
+  });
+}
+
+function renderComposerSelectedChips() {
+  const container = document.getElementById("composer-selected-tags");
+  container.innerHTML = "";
+  
+  SELECTED_TAGS.forEach(tId => {
+    const t = DB.tags.find(tag => tag.id === tId);
+    if (!t) return;
+    
+    const chip = document.createElement("span");
+    let grpClass = "default";
+    if (t.group === "症状") grpClass = "symptom";
+    if (t.group === "薬" || t.group === "サプリ") grpClass = "action";
+    if (t.group === "環境") grpClass = "factor";
+    
+    chip.className = `chip ${grpClass}`;
+    chip.innerText = t.name;
+    chip.onclick = () => {
+      SELECTED_TAGS = SELECTED_TAGS.filter(id => id !== tId);
+      renderComposerSelectedChips();
+      renderComposerTagSelector();
+    };
+    container.appendChild(chip);
+  });
+}
+
+function renderComposerTagSelector() {
+  const container = document.getElementById("composer-tag-selector");
+  container.innerHTML = "";
+
+  // Group tags
+  const activeTags = DB.tags.filter(t => !t.isArchived);
+  
+  // Show active tags grouped
+  const groups = ["症状", "薬", "サプリ", "運動", "環境"];
+  groups.forEach(groupName => {
+    const groupTags = activeTags.filter(t => t.group === groupName);
+    if (groupTags.length === 0) return;
+    
+    const grpDiv = document.createElement("div");
+    grpDiv.className = "tag-selector-group";
+    
+    const title = document.createElement("div");
+    title.className = "tag-selector-group-title";
+    title.innerText = groupName;
+    grpDiv.appendChild(title);
+    
+    const chipsDiv = document.createElement("div");
+    chipsDiv.className = "tag-selector-chips";
+    
+    groupTags.forEach(t => {
+      const isSelected = SELECTED_TAGS.includes(t.id);
+      const chip = document.createElement("span");
+      
+      let grpClass = "default";
+      if (t.group === "症状") grpClass = "symptom";
+      if (t.group === "薬" || t.group === "サプリ") grpClass = "action";
+      if (t.group === "環境") grpClass = "factor";
+      
+      chip.className = `chip ${grpClass} ${isSelected ? 'selected' : ''}`;
+      if (isSelected) {
+        chip.style.border = "1.5px solid var(--text-main)";
+      }
+      chip.innerText = t.name;
+      
+      chip.onclick = () => {
+        if (isSelected) {
+          SELECTED_TAGS = SELECTED_TAGS.filter(id => id !== t.id);
+        } else {
+          SELECTED_TAGS.push(t.id);
+        }
+        renderComposerSelectedChips();
+        renderComposerTagSelector();
+      };
+      
+      chipsDiv.appendChild(chip);
+    });
+    
+    grpDiv.appendChild(chipsDiv);
+    container.appendChild(grpDiv);
+  });
+}
+
+function openActionSheet(recordId) {
+  EDITING_RECORD_ID = recordId;
+  document.getElementById("track-action-sheet").classList.add("active");
+  document.getElementById("scrim").classList.add("active");
+
+  const specStateEl = document.getElementById("state-track-action-sheet");
+  if (specStateEl) {
+    document.querySelectorAll(".spec-table tr").forEach(tr => tr.classList.remove("highlighted"));
+    specStateEl.classList.add("highlighted");
+  }
+}
+
+function editRecord() {
+  const rec = DB.records.find(r => r.id === EDITING_RECORD_ID);
+  if (!rec) return;
+
+  // Load into composer
+  document.getElementById("composer-comment").value = rec.comment || "";
+  
+  // Set value pill
+  document.querySelectorAll(".composer-status-pill").forEach(pill => {
+    const val = parseInt(pill.getAttribute("data-score"));
+    if (val === rec.value) {
+      pill.classList.add("selected");
+    } else {
+      pill.classList.remove("selected");
+    }
+  });
+
+  // Set selected tags
+  SELECTED_TAGS = DB.record_tags.filter(rt => rt.record_id === rec.id).map(rt => rt.tag_id);
+  
+  renderComposerSelectedChips();
+  openComposer();
+  
+  // Close action sheet
+  document.getElementById("track-action-sheet").classList.remove("active");
+}
+
+function deleteRecord() {
+  if (!EDITING_RECORD_ID) return;
+  
+  DB.records = DB.records.filter(r => r.id !== EDITING_RECORD_ID);
+  DB.record_tags = DB.record_tags.filter(rt => rt.record_id !== EDITING_RECORD_ID);
+  
+  logState(`Deleted record: ${EDITING_RECORD_ID}`);
+  
+  closeAllOverlays();
+  renderApp();
+}
+
+function saveComposerRecord() {
+  const activePill = document.querySelector(".composer-status-pill.selected");
+  const value = activePill ? parseInt(activePill.getAttribute("data-score")) : 0;
+  const comment = document.getElementById("composer-comment").value;
+  
+  if (EDITING_RECORD_ID) {
+    // Update Mode
+    const rec = DB.records.find(r => r.id === EDITING_RECORD_ID);
+    if (rec) {
+      rec.value = value;
+      rec.comment = comment;
+      DB.record_tags = DB.record_tags.filter(rt => rt.record_id === EDITING_RECORD_ID);
+      SELECTED_TAGS.forEach(tId => {
+        DB.record_tags.push({ record_id: EDITING_RECORD_ID, tag_id: tId, value: 1.0 });
+      });
+      logState(`Updated record: ${EDITING_RECORD_ID}`);
+    }
+  } else {
+    // Create Mode
+    const nowReal = new Date();
+    const timestamp = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), nowReal.getHours(), nowReal.getMinutes(), nowReal.getSeconds());
+    
+    const newId = `rec_${Date.now()}`;
+    DB.records.push({
+      id: newId,
+      timestamp: timestamp,
+      comment: comment,
+      value: value
+    });
+
+    SELECTED_TAGS.forEach(tId => {
+      DB.record_tags.push({ record_id: newId, tag_id: tId, value: 1.0 });
+    });
+    
+    logState(`Created new record with ID ${newId}`);
+  }
+
+  // Clear states
+  SELECTED_TAGS = [];
+  document.getElementById("composer-comment").value = "";
+  document.querySelectorAll(".composer-status-pill").forEach(p => p.classList.remove("selected"));
+  document.querySelector('.composer-status-pill[data-score="0"]').classList.add("selected");
+  
+  closeAllOverlays();
+  renderApp();
+}
+
+// --- CALENDAR SCREEN LOGIC ---
+
+function adjustMonth(offset) {
+  VIEW_DATE.setMonth(VIEW_DATE.getMonth() + offset);
+  renderCalendar();
+}
+
+function renderCalendar() {
+  const monthTitle = document.getElementById("cal-month-title");
+  monthTitle.innerText = `${VIEW_DATE.getFullYear()}年${VIEW_DATE.getMonth() + 1}月`;
+  
+  const grid = document.getElementById("calendar-grid");
+  
+  const headerColsCount = 7;
+  while(grid.children.length > headerColsCount) {
+    grid.removeChild(grid.lastChild);
+  }
+
+  const year = VIEW_DATE.getFullYear();
+  const month = VIEW_DATE.getMonth();
+  
+  const firstDay = new Date(year, month, 1);
+  const startDayOfWeek = firstDay.getDay();
+  
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  
+  for (let i = 0; i < startDayOfWeek; i++) {
+    const cell = document.createElement("div");
+    cell.className = "cal-cell";
+    cell.innerHTML = `<span class="cal-dot empty"></span>`;
+    grid.appendChild(cell);
+  }
+
+  const colorMap = {
+    1: "var(--score-1)",
+    2: "var(--score-2)",
+    3: "var(--score-3)",
+    4: "var(--score-4)",
+    5: "var(--score-5)"
+  };
+
+  for (let d = 1; d <= totalDays; d++) {
+    const cellDate = new Date(year, month, d);
+    const cell = document.createElement("div");
+    cell.className = "cal-cell";
+    
+    const dayStart = new Date(year, month, d, 0, 0, 0);
+    const dayEnd = new Date(year, month, d, 23, 59, 59);
+    const dayRecs = DB.records.filter(r => r.timestamp >= dayStart && r.timestamp <= dayEnd);
+    
+    cell.onclick = () => {
+      VIEW_DATE = cellDate;
+      switchScreen("track");
+    };
+
+    if (dayRecs.length === 0) {
+      cell.innerHTML = `<span class="cal-dot empty">${d}</span>`;
+    } else if (dayRecs.length === 1) {
+      const uiScore = dbToUiScore(dayRecs[0].value);
+      cell.innerHTML = `<span class="cal-dot s${uiScore}">${d}</span>`;
+    } else {
+      const uniqueScores = [...new Set(dayRecs.map(r => dbToUiScore(r.value)))];
+      
+      let gradientStyle = "";
+      if (uniqueScores.length > 1) {
+        const segmentPercent = 100 / uniqueScores.length;
+        const colorStops = uniqueScores.map((s, idx) => {
+          return `${colorMap[s]} ${(idx * segmentPercent).toFixed(1)}% ${((idx + 1) * segmentPercent).toFixed(1)}%`;
+        }).join(", ");
+        gradientStyle = `background: conic-gradient(from -90deg, ${colorStops})`;
+      } else {
+        gradientStyle = `background: ${colorMap[uniqueScores[0]]}`;
+      }
+
+      cell.innerHTML = `
+        <span class="cal-dot ring">
+          <span class="ring-bg" style="${gradientStyle}"></span>
+          <span class="ring-hole"></span>
+          <span class="day-num">${d}</span>
+        </span>
+      `;
+    }
+    grid.appendChild(cell);
+  }
+
+  renderCalendarBottomStats(year, month);
+}
+
+function renderCalendarBottomStats(year, month) {
+  let counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+  let sumScore = 0;
+  let scoreCount = 0;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  for (let d = 1; d <= daysInMonth; d++) {
+    const scoreVal = calculateDailyScore(DB.records, new Date(year, month, d));
+    if (scoreVal !== null) {
+      const uiScore = dbToUiScore(scoreVal);
+      counts[uiScore]++;
+      sumScore += (scoreVal + 3);
+      scoreCount++;
+    }
+  }
+
+  const totalEvaluatedDays = scoreCount || 1;
+  const avgMonthVal = scoreCount ? (sumScore / scoreCount).toFixed(1) : "-";
+  document.getElementById("donut-avg-val").innerText = avgMonthVal;
+
+  let totalPercentAccum = 0;
+  for (let s = 1; s <= 5; s++) {
+    const seg = document.getElementById(`donut-seg-${s}`);
+    const pct = (counts[s] / totalEvaluatedDays) * 100;
+    
+    seg.setAttribute("stroke-dasharray", `${pct.toFixed(1)} 100`);
+    seg.setAttribute("stroke-dashoffset", `${(-totalPercentAccum).toFixed(1)}`);
+    totalPercentAccum += pct;
+  }
+
+  const legend = document.getElementById("donut-legend");
+  legend.innerHTML = `
+    <div class="legend-item"><span class="legend-color" style="background:var(--score-5)"></span>最高: ${counts[5]}日 (${Math.round(counts[5]/totalEvaluatedDays*100)}%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:var(--score-4)"></span>良い: ${counts[4]}日 (${Math.round(counts[4]/totalEvaluatedDays*100)}%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:var(--score-3)"></span>普通: ${counts[3]}日 (${Math.round(counts[3]/totalEvaluatedDays*100)}%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:var(--score-2)"></span>悪い: ${counts[2]}日 (${Math.round(counts[2]/totalEvaluatedDays*100)}%)</div>
+    <div class="legend-item"><span class="legend-color" style="background:var(--score-1)"></span>最悪: ${counts[1]}日 (${Math.round(counts[1]/totalEvaluatedDays*100)}%)</div>
+  `;
+
+  let trendScores = [];
+  let datesLabel = [];
+  const sparkStart = new Date(VIEW_DATE.getTime() - 6 * 24 * 3600 * 1000);
+  
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(sparkStart.getTime() + i * 24 * 3600 * 1000);
+    const val = calculateDailyScore(DB.records, d);
+    trendScores.push(val !== null ? val : 0.0);
+    datesLabel.push(`${d.getMonth()+1}/${d.getDate()}`);
+  }
+
+  const trendAvg = (trendScores.reduce((a,b) => a+b, 0) / 7).toFixed(1);
+  const trendAvgUi = (parseFloat(trendAvg) + 3).toFixed(1);
+  document.getElementById("trend-avg-val").innerText = trendAvgUi;
+
+  let prevScores = [];
+  const prevStart = new Date(sparkStart.getTime() - 7 * 24 * 3600 * 1000);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(prevStart.getTime() + i * 24 * 3600 * 1000);
+    const val = calculateDailyScore(DB.records, d);
+    prevScores.push(val !== null ? val : 0.0);
+  }
+  const prevAvg = prevScores.reduce((a,b) => a+b, 0) / 7;
+  const currentAvgRaw = trendScores.reduce((a,b) => a+b, 0) / 7;
+  const diff = currentAvgRaw - prevAvg;
+  
+  const badge = document.getElementById("trend-change-badge");
+  if (diff >= 0.1) {
+    badge.className = "trend-change-badge up";
+    badge.innerText = `↑ +${diff.toFixed(1)}`;
+  } else if (diff <= -0.1) {
+    badge.className = "trend-change-badge down";
+    badge.innerText = `↓ ${diff.toFixed(1)}`;
+  } else {
+    badge.className = "trend-change-badge";
+    badge.style.background = "var(--border-phone-screen)";
+    badge.style.color = "var(--text-muted)";
+    badge.innerText = `±0.0`;
+  }
+
+  const svg = document.getElementById("trend-sparkline-svg");
+  svg.innerHTML = "";
+  
+  const baseline = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  baseline.setAttribute("x1", "0");
+  baseline.setAttribute("y1", "27.5");
+  baseline.setAttribute("x2", "280");
+  baseline.setAttribute("y2", "27.5");
+  baseline.setAttribute("stroke", "var(--border-phone-screen)");
+  baseline.setAttribute("stroke-dasharray", "2,2");
+  baseline.setAttribute("stroke-width", "1");
+  svg.appendChild(baseline);
+
+  const mapY = (val) => {
+    return 27.5 - (val * 11.25);
+  };
+
+  const points = trendScores.map((score, idx) => {
+    return { x: 15 + idx * 41, y: mapY(score) };
+  });
+
+  let pathD = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const cpX1 = points[i].x + 20;
+    const cpY1 = points[i].y;
+    const cpX2 = points[i+1].x - 20;
+    const cpY2 = points[i+1].y;
+    pathD += ` C ${cpX1} ${cpY1}, ${cpX2} ${cpY2}, ${points[i+1].x} ${points[i+1].y}`;
+  }
+
+  const curve = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  curve.setAttribute("d", pathD);
+  curve.setAttribute("stroke", "#3b82f6");
+  curve.setAttribute("stroke-width", "2.5");
+  curve.setAttribute("fill", "none");
+  svg.appendChild(curve);
+
+  points.forEach((pt, idx) => {
+    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    dot.setAttribute("cx", pt.x);
+    dot.setAttribute("cy", pt.y);
+    dot.setAttribute("r", "3.5");
+    
+    const scoreVal = trendScores[idx];
+    const scoreUi = dbToUiScore(scoreVal);
+    let fill = "var(--score-3)";
+    if (scoreUi === 1) fill = "var(--score-1)";
+    if (scoreUi === 2) fill = "var(--score-2)";
+    if (scoreUi === 4) fill = "var(--score-4)";
+    if (scoreUi === 5) fill = "var(--score-5)";
+    
+    dot.setAttribute("fill", fill);
+    dot.setAttribute("stroke", "var(--bg-phone)");
+    dot.setAttribute("stroke-width", "1");
+    svg.appendChild(dot);
+  });
+
+  const labelsContainer = document.getElementById("trend-sparkline-labels");
+  labelsContainer.innerHTML = datesLabel.map(lbl => `<span>${lbl}</span>`).join("");
+}
+
+// --- STATS SCREEN LOGIC ---
+
+function renderStats() {
+  if (DB.records.length === 0) {
+    document.getElementById("screen-stats").innerHTML = `
+      <div class="empty-state">
+        <span class="empty-state-icon">📊</span>
+        <span class="empty-state-title">統計データがありません</span>
+        <span class="empty-state-desc">統計分析には、少なくともいくつかの体調評価とアクション/症状のタグ記録が必要です。</span>
+      </div>
+    `;
+    return;
+  }
+
+  render30DaysTrendChart();
+
+  const selector = document.getElementById("stats-event-locked-tag-select");
+  selector.innerHTML = "";
+  
+  const usedTagIds = [...new Set(DB.record_tags.map(rt => rt.tag_id))];
+  const selectTags = DB.tags.filter(t => usedTagIds.includes(t.id));
+  
+  selectTags.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.id;
+    opt.innerText = `[${t.group}] ${t.name}`;
+    selector.appendChild(opt);
+  });
+
+  if (selectTags.length > 0) {
+    renderEventLockedChart(selectTags[0].id);
+  } else {
+    const elSvg = document.getElementById("stats-event-locked-svg");
+    elSvg.innerHTML = `<text x="140" y="40" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--text-muted)">使用されたタグがありません</text>`;
+  }
+
+  renderCorrelationList();
+}
+
+function render30DaysTrendChart() {
+  const svg = document.getElementById("stats-trend-svg");
+  svg.innerHTML = "";
+
+  const baseline = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  baseline.setAttribute("x1", "0");
+  baseline.setAttribute("y1", "40");
+  baseline.setAttribute("x2", "280");
+  baseline.setAttribute("y2", "40");
+  baseline.setAttribute("stroke", "var(--border-phone-screen)");
+  baseline.setAttribute("stroke-dasharray", "2,2");
+  svg.appendChild(baseline);
+
+  if (DB.records.length === 0) return;
+
+  const now = new Date("2026-07-11");
+  let points = [];
+  
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 3600 * 1000);
+    const val = calculateDailyScore(DB.records, d);
+    if (val !== null) {
+      const x = 10 + ((29 - i) / 29) * 260;
+      const y = 40 - (val * 15);
+      points.push({ x, y, score: val });
+    }
+  }
+
+  if (points.length < 2) return;
+
+  let pathD = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const next = points[i+1];
+    pathD += ` L ${next.x} ${next.y}`;
+  }
+
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  line.setAttribute("d", pathD);
+  line.setAttribute("stroke", "#3b82f6");
+  line.setAttribute("stroke-width", "2");
+  line.setAttribute("fill", "none");
+  svg.appendChild(line);
+
+  points.forEach(pt => {
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("cx", pt.x);
+    c.setAttribute("cy", pt.y);
+    c.setAttribute("r", "2");
+    c.setAttribute("fill", pt.score >= 0 ? "var(--score-4)" : "var(--score-1)");
+    svg.appendChild(c);
+  });
+}
+
+function renderEventLockedChart(tagId) {
+  const svg = document.getElementById("stats-event-locked-svg");
+  svg.innerHTML = "";
+  
+  const tag = DB.tags.find(t => t.id === tagId);
+  if (!tag) return;
+
+  const matchingRecordIds = DB.record_tags.filter(rt => rt.tag_id === tagId).map(rt => rt.record_id);
+  const triggerRecords = DB.records.filter(r => matchingRecordIds.includes(r.id));
+  
+  if (triggerRecords.length === 0) {
+    svg.innerHTML = `<text x="140" y="40" text-anchor="middle" dominant-baseline="middle" font-size="10" fill="var(--text-muted)">データがありません</text>`;
+    return;
+  }
+
+  const marker = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  marker.setAttribute("x1", "140");
+  marker.setAttribute("y1", "5");
+  marker.setAttribute("x2", "140");
+  marker.setAttribute("y2", "75");
+  marker.setAttribute("stroke", "var(--score-1)");
+  marker.setAttribute("stroke-width", "1.5");
+  marker.setAttribute("stroke-dasharray", "3,3");
+  svg.appendChild(marker);
+
+  let windowSums = Array(25).fill(0);
+  let windowCounts = Array(25).fill(0);
+  
+  const fullDecaySeries = generateSeriesWithDecay(DB.records);
+
+  triggerRecords.forEach(tr => {
+    const t0 = tr.timestamp.getTime();
+    
+    for (let h = -12; h <= 12; h++) {
+      const targetTime = t0 + h * 3600 * 1000;
+      
+      const val = interpolateConditionVal(fullDecaySeries, targetTime);
+      if (val !== null) {
+        windowSums[h + 12] += val;
+        windowCounts[h + 12]++;
+      }
+    }
+  });
+
+  let points = [];
+  for (let i = 0; i <= 24; i++) {
+    const avg = windowCounts[i] ? (windowSums[i] / windowCounts[i]) : 0;
+    const x = 10 + (i / 24) * 260;
+    const y = 43 - (avg * 15);
+    points.push({ x, y });
+  }
+
+  let pathD = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 0; i < points.length - 1; i++) {
+    const next = points[i+1];
+    pathD += ` L ${next.x} ${next.y}`;
+  }
+
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  line.setAttribute("d", pathD);
+  line.setAttribute("stroke", "var(--text-main)");
+  line.setAttribute("stroke-width", "2");
+  line.setAttribute("fill", "none");
+  svg.appendChild(line);
+
+  const lblT0 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  lblT0.setAttribute("x", "140");
+  lblT0.setAttribute("y", "76");
+  lblT0.setAttribute("font-size", "8");
+  lblT0.setAttribute("text-anchor", "middle");
+  lblT0.setAttribute("fill", "var(--text-muted)");
+  lblT0.innerHTML = "タグ発生";
+  svg.appendChild(lblT0);
+
+  const lblMin12 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  lblMin12.setAttribute("x", "15");
+  lblMin12.setAttribute("y", "76");
+  lblMin12.setAttribute("font-size", "8");
+  lblMin12.setAttribute("fill", "var(--text-muted)");
+  lblMin12.innerHTML = "-12h";
+  svg.appendChild(lblMin12);
+
+  const lblPlus12 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  lblPlus12.setAttribute("x", "255");
+  lblPlus12.setAttribute("y", "76");
+  lblPlus12.setAttribute("font-size", "8");
+  lblPlus12.setAttribute("fill", "var(--text-muted)");
+  lblPlus12.innerHTML = "+12h";
+  svg.appendChild(lblPlus12);
+}
+
+function interpolateConditionVal(decaySeries, targetTime) {
+  if (decaySeries.length === 0) return null;
+  if (targetTime < decaySeries[0].t) return 0;
+  if (targetTime > decaySeries[decaySeries.length - 1].t) {
+    const last = decaySeries[decaySeries.length - 1];
+    if (targetTime - last.t > 12 * 3600 * 1000) return 0;
+    const ratio = (targetTime - last.t) / (12 * 3600 * 1000);
+    return last.val * (1 - ratio);
+  }
+
+  for (let i = 0; i < decaySeries.length - 1; i++) {
+    const cur = decaySeries[i];
+    const next = decaySeries[i+1];
+    
+    if (targetTime >= cur.t && targetTime <= next.t) {
+      if (cur.t === next.t) return cur.val;
+      const ratio = (targetTime - cur.t) / (next.t - cur.t);
+      return cur.val + (next.val - cur.val) * ratio;
+    }
+  }
+  return 0;
+}
+
+function renderCorrelationList() {
+  const container = document.getElementById("stats-correlation-list");
+  container.innerHTML = "";
+
+  const actionTags = DB.tags.filter(t => t.group === "薬" || t.group === "サプリ" || t.group === "運動");
+  const symptomTags = DB.tags.filter(t => t.group === "症状" || t.group === "環境");
+
+  const allRecordDays = [...new Set(DB.records.map(r => r.timestamp.toDateString()))];
+  const N_DAYS = allRecordDays.length;
+
+  if (N_DAYS < 2) {
+    container.innerHTML = `<div style="font-size:10px; color:var(--text-muted); text-align:center;">分析に十分な日数データがありません。</div>`;
+    return;
+  }
+
+  let results = [];
+
+  actionTags.forEach(act => {
+    symptomTags.forEach(sym => {
+      let a = 0, b = 0, c = 0, d = 0;
+      
+      allRecordDays.forEach(dayStr => {
+        const dayStart = new Date(dayStr);
+        dayStart.setHours(0,0,0,0);
+        const dayEnd = new Date(dayStr);
+        dayEnd.setHours(23,59,59,999);
+        
+        const dayRecIds = DB.records.filter(r => r.timestamp >= dayStart && r.timestamp <= dayEnd).map(r => r.id);
+        const dayTagIds = DB.record_tags.filter(rt => dayRecIds.includes(rt.record_id)).map(rt => rt.tag_id);
+        
+        const hasAct = dayTagIds.includes(act.id);
+        const hasSym = dayTagIds.includes(sym.id);
+
+        if (hasAct && hasSym) a++;
+        else if (hasAct && !hasSym) b++;
+        else if (!hasAct && hasSym) c++;
+        else d++;
+      });
+
+      const totalActDays = a + b;
+      const totalSymDays = a + c;
+      
+      let lift = 1.0;
+      if (totalActDays > 0 && totalSymDays > 0) {
+        lift = (a / totalActDays) / (totalSymDays / N_DAYS);
+      }
+
+      const pVal = fishersExactTest(a, b, c, d);
+
+      results.push({
+        act: act,
+        sym: sym,
+        a: a,
+        totalActDays: totalActDays,
+        totalSymDays: totalSymDays,
+        lift: lift,
+        pVal: pVal
+      });
+    });
+  });
+
+  const threshold = 2;
+  results.sort((x, y) => y.lift - x.lift);
+
+  const significantResults = results.filter(r => r.totalActDays >= threshold && r.totalSymDays >= threshold);
+  const insufficientResults = results.filter(r => r.totalActDays < threshold || r.totalSymDays < threshold);
+
+  significantResults.forEach(r => {
+    const item = document.createElement("div");
+    item.className = "assoc-item";
+    
+    const isNeg = r.lift < 1.0;
+    
+    item.innerHTML = `
+      <div class="assoc-tags">
+        <span class="chip action">${r.act.name}</span>
+        <span class="assoc-tag-arrow">➔</span>
+        <span class="chip symptom">${r.sym.name}</span>
+      </div>
+      <div class="assoc-metrics">
+        <div class="assoc-lift ${isNeg ? 'negative' : ''}">
+          Lift: ${r.lift.toFixed(2)}
+        </div>
+        <div class="assoc-details">
+          共起: ${r.a}日 / p値: ${r.pVal.toFixed(3)}
+        </div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+
+  if (insufficientResults.length > 0) {
+    const subTitle = document.createElement("div");
+    subTitle.style.fontSize = "9px";
+    subTitle.style.fontWeight = "800";
+    subTitle.style.color = "var(--text-muted)";
+    subTitle.style.marginTop = "12px";
+    subTitle.style.marginBottom = "4px";
+    subTitle.innerText = "データ不足 (発生回数不足)";
+    container.appendChild(subTitle);
+    
+    insufficientResults.slice(0, 4).forEach(r => {
+      const item = document.createElement("div");
+      item.className = "assoc-item";
+      item.style.opacity = "0.5";
+      item.innerHTML = `
+        <div class="assoc-tags">
+          <span class="chip default">${r.act.name}</span>
+          <span class="assoc-tag-arrow">➔</span>
+          <span class="chip default">${r.sym.name}</span>
+        </div>
+        <div class="assoc-metrics">
+          <span style="font-size:10px; color:var(--text-muted);">データ不足</span>
+        </div>
+      `;
+      container.appendChild(item);
+    });
+  }
+}
+
+// --- TAGS SCREEN LOGIC ---
+
+let SELECTED_TAG_EDIT_ID = null;
+
+function renderTagsScreen() {
+  const activeContainer = document.getElementById("tags-active-list");
+  const archivedContainer = document.getElementById("tags-archived-list");
+  
+  activeContainer.innerHTML = "";
+  archivedContainer.innerHTML = "";
+
+  DB.tags.forEach(t => {
+    const chip = document.createElement("span");
+    
+    let grpClass = "default";
+    if (t.group === "症状") grpClass = "symptom";
+    if (t.group === "薬" || t.group === "サプリ") grpClass = "action";
+    if (t.group === "環境") grpClass = "factor";
+    
+    chip.className = `chip ${grpClass} ${t.isArchived ? 'archived' : ''}`;
+    chip.innerText = t.name;
+    
+    chip.onclick = () => openTagEditModal(t.id);
+    
+    if (t.isArchived) {
+      archivedContainer.appendChild(chip);
+    } else {
+      activeContainer.appendChild(chip);
+    }
+  });
+
+  if (activeContainer.children.length === 0) {
+    activeContainer.innerHTML = `<span style="font-size:10px; color:var(--text-muted)">登録されているタグはありません。</span>`;
+  }
+  if (archivedContainer.children.length === 0) {
+    archivedContainer.innerHTML = `<span style="font-size:10px; color:var(--text-muted)">アーカイブされたタグはありません。</span>`;
+  }
+}
+
+function openTagAddModal() {
+  SELECTED_TAG_EDIT_ID = null;
+  document.getElementById("tags-modal-title").innerText = "新しいタグ";
+  document.getElementById("tags-modal-name").value = "";
+  document.getElementById("tags-modal-group").value = "症状";
+  
+  document.getElementById("tags-modal-archive").style.display = "none";
+  document.getElementById("tags-modal-unarchive").style.display = "none";
+  
+  document.getElementById("tags-modal").classList.add("active");
+  document.getElementById("scrim").classList.add("active");
+}
+
+function openTagEditModal(tagId) {
+  const tag = DB.tags.find(t => t.id === tagId);
+  if (!tag) return;
+
+  SELECTED_TAG_EDIT_ID = tagId;
+  document.getElementById("tags-modal-title").innerText = "タグを編集";
+  document.getElementById("tags-modal-name").value = tag.name;
+  document.getElementById("tags-modal-group").value = tag.group;
+  
+  if (tag.isArchived) {
+    document.getElementById("tags-modal-archive").style.display = "none";
+    document.getElementById("tags-modal-unarchive").style.display = "block";
+  } else {
+    document.getElementById("tags-modal-archive").style.display = "block";
+    document.getElementById("tags-modal-unarchive").style.display = "none";
+  }
+  
+  document.getElementById("tags-modal").classList.add("active");
+  document.getElementById("scrim").classList.add("active");
+}
+
+function closeTagModal() {
+  document.getElementById("tags-modal").classList.remove("active");
+  document.getElementById("scrim").classList.remove("active");
+}
+
+function saveTag() {
+  const name = document.getElementById("tags-modal-name").value.trim();
+  const group = document.getElementById("tags-modal-group").value;
+  
+  if (!name) return;
+
+  if (SELECTED_TAG_EDIT_ID) {
+    const tag = DB.tags.find(t => t.id === SELECTED_TAG_EDIT_ID);
+    if (tag) {
+      tag.name = name;
+      tag.group = group;
+      logState(`Edited tag: ${tag.id}`);
+    }
+  } else {
+    const newId = `t_${Date.now()}`;
+    DB.tags.push({
+      id: newId,
+      name: name,
+      group: group,
+      isArchived: false
+    });
+    logState(`Created new tag: ${name}`);
+  }
+  
+  closeTagModal();
+  renderApp();
+}
+
+function archiveTag(archive) {
+  if (!SELECTED_TAG_EDIT_ID) return;
+  
+  const tag = DB.tags.find(t => t.id === SELECTED_TAG_EDIT_ID);
+  if (tag) {
+    tag.isArchived = archive;
+    logState(`Archive status set to ${archive} for tag: ${tag.name}`);
+  }
+  
+  closeTagModal();
+  renderApp();
+}
+
+// --- SETTINGS CONTROLS ---
+
+function clearAllDatabase() {
+  DB.records = [];
+  DB.record_tags = [];
+  logState("Erase command run. Database initialized empty.");
+  
+  closeAllOverlays();
+  renderApp();
+}
+
+// --- UTIL FORMATTERS ---
+
+function isToday(d) {
+  const today = new Date();
+  return d.getDate() === today.getDate() &&
+         d.getMonth() === today.getMonth() &&
+         d.getFullYear() === today.getFullYear();
+}
+
+function formatDateJP(d) {
+  const weekDays = ["日曜", "月曜", "火曜", "水曜", "木曜", "金曜", "土曜"];
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${weekDays[d.getDay()]}`;
+}
+
+// --- INIT LAUNCH ---
+window.onload = initApp;
+
+</script>
+</body>
+</html>
