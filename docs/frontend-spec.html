@@ -262,6 +262,11 @@ body {
   font-size: 11px;
   color: var(--text-muted);
 }
+.header-action-spacer {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
 
 .icon-btn {
   width: 32px;
@@ -475,6 +480,7 @@ body {
 }
 
 .composer-bar {
+  width: 100%;
   background: var(--bg-phone);
   border: 1px solid var(--border-phone-screen);
   border-radius: 20px;
@@ -483,17 +489,18 @@ body {
   align-items: center;
   gap: 6px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 .composer-bar-plus {
-  border: 0;
-  background: transparent;
   color: var(--text-main);
   font-size: 24px;
   width: 28px;
   height: 28px;
   display: grid;
   place-items: center;
-  cursor: pointer;
 }
 .composer-bar-input {
   flex: 1;
@@ -505,13 +512,11 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 0;
   background: var(--border-color);
   color: var(--bg-phone);
   font-weight: 900;
   display: grid;
   place-items: center;
-  cursor: pointer;
 }
 .composer-bar-send.active {
   background: #3b82f6;
@@ -1380,7 +1385,7 @@ body {
             <div class="app-title" id="app-header-title">Today</div>
             <div class="app-subtitle" id="app-header-subtitle">7月11日 土曜</div>
           </div>
-          <button class="icon-btn" id="header-action-btn" style="font-size: 16px;">🔍</button>
+          <span class="header-action-spacer" aria-hidden="true"></span>
         </header>
 
         <!-- Drawer Navigation -->
@@ -1416,11 +1421,11 @@ body {
 
           <!-- Bottom bar composer -->
           <div class="composer-wrap">
-            <div class="composer-bar" id="composer-trigger-btn">
-              <button class="composer-bar-plus">+</button>
-              <div class="composer-bar-input">体調やタグを記録...</div>
-              <button class="composer-bar-send">↑</button>
-            </div>
+            <button class="composer-bar" id="composer-trigger-btn" type="button" aria-label="記録Composerを開く">
+              <span class="composer-bar-plus" aria-hidden="true">+</span>
+              <span class="composer-bar-input">体調やタグを記録...</span>
+              <span class="composer-bar-send" aria-hidden="true">↑</span>
+            </button>
           </div>
 
           <!-- sliding sheet panel -->
@@ -2375,16 +2380,19 @@ function switchScreen(screenId) {
   // Update headers
   const headerTitle = document.getElementById("app-header-title");
   const headerSubtitle = document.getElementById("app-header-subtitle");
+  const demoDateLabel = `デモ日 ${DEMO_CLOCK_ORIGIN.getFullYear()}/${DEMO_CLOCK_ORIGIN.getMonth() + 1}/${DEMO_CLOCK_ORIGIN.getDate()}`;
   
   if (screenId === "track") {
     headerTitle.innerText = isToday(VIEW_DATE) ? "Today" : formatDateJP(VIEW_DATE);
-    headerSubtitle.innerText = isToday(VIEW_DATE) ? formatDateJP(VIEW_DATE) + " 今日" : "過去日の閲覧";
+    headerSubtitle.innerText = isToday(VIEW_DATE)
+      ? `今日・${demoDateLabel}`
+      : `過去日の閲覧・${demoDateLabel}`;
   } else if (screenId === "calendar") {
     headerTitle.innerText = "Calendar";
-    headerSubtitle.innerText = "月次体調グラフと集計";
+    headerSubtitle.innerText = `月次集計・${demoDateLabel}`;
   } else if (screenId === "stats") {
     headerTitle.innerText = "Stats";
-    headerSubtitle.innerText = "体調の因果特定分析";
+    headerSubtitle.innerText = `因果分析・${demoDateLabel}`;
   } else if (screenId === "tags") {
     headerTitle.innerText = "Tags";
     headerSubtitle.innerText = "タグマスタ管理";
