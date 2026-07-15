@@ -6,9 +6,9 @@ import '../../domain/stats/contingency.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/stats_providers.dart';
 
-/// plan.md M6「行動タグ×症状タグの関連リスト（リフト値降順、p値・発生回数併記）」。
+/// spec.md M6「行動タグ×症状タグの関連リスト（リフト値降順、p値・発生回数併記）」。
 /// 計算はtagPairStatsProviderにメモ化されており、レコード・タグの変化時のみ
-/// 再実行される。アーカイブ済みタグも統計対象に含まれる（design.md §5.4）。
+/// 再実行される。アーカイブ済みタグも統計対象に含まれる（spec.md §5.4）。
 class TagPairList extends ConsumerWidget {
   const TagPairList({super.key});
 

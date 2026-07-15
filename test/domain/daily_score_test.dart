@@ -126,7 +126,7 @@ void main() {
   });
 
   group('roundDailyScore', () {
-    test('四捨五入して-2〜2にクランプする（plan.md §6.2）', () {
+    test('四捨五入して-2〜2にクランプする（spec.md §6.2）', () {
       expect(roundDailyScore(0.4), 0);
       expect(roundDailyScore(0.5), 1);
       expect(roundDailyScore(-0.5), -1);

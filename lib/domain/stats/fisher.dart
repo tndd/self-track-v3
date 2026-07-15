@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'contingency.dart';
 
-/// design.md §4.3・plan.md §6.3: Fisherの正確確率検定（両側）。
+/// spec.md 第I部 §4.3・第II部 §6.3: Fisherの正確確率検定（両側）。
 ///
 /// 2×2分割表の行和・列和（周辺和）を固定した超幾何分布のもとで、観測表と
 /// 同じか、それ以下の確率を持つすべての表の確率を合計する。対数階乗の

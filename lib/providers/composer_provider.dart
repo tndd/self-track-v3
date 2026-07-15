@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Track画面の記録入力フォーム（Composer）のUI状態。
-/// design.md §5.1のパネル（体調5段階 + タグ選択 + コメント）に対応する。
+/// spec.md §5.1のパネル（体調5段階 + タグ選択 + コメント）に対応する。
 class ComposerState {
   const ComposerState({
     this.isExpanded = false,

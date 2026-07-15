@@ -1,6 +1,6 @@
 import 'models.dart';
 
-/// design.md §4.1の「12時間以上ログがない場合は平常（0）に戻る」を
+/// spec.md §4.1の「12時間以上ログがない場合は平常（0）に戻る」を
 /// 表現する閾値。
 const decayThreshold = Duration(hours: 12);
 
@@ -73,7 +73,7 @@ List<ConditionPoint> buildConditionSeries(
 /// [series]（timestamp昇順であること）を使い、任意時刻[t]の体調値を線形補間で求める。
 /// daily_score.dart・stats/event_locked.dartの双方が使う共通ロジック。
 ///
-/// - 系列の最初の点より前の時刻: データが無いため既定値0とする（design.md §2.2）。
+/// - 系列の最初の点より前の時刻: データが無いため既定値0とする（spec.md §2.2）。
 /// - 系列の最後の点より後の時刻: 最後の値がそのまま続くとみなす。
 ///   （buildConditionSeriesは系列をnowで終端させるため、通常この分岐は
 ///   now以降＝未来の時刻を問い合わせた場合にのみ通る。未来のサンプリングを

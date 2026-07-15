@@ -29,7 +29,7 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(tags, tags.colorIndex);
           }
           if (from < 3) {
-            // v3: records.timestampのインデックス（plan.md M1）。
+            // v3: records.timestampのインデックス（spec.md M1）。
             await m.createIndex(idxRecordsTimestamp);
           }
         },

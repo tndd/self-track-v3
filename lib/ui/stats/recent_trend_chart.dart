@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/dates.dart';
 import '../../providers/score_providers.dart';
 
-/// plan.md M6「直近30日の体調スコア推移グラフ」。
+/// spec.md M6「直近30日の体調スコア推移グラフ」。
 /// 日次スコアはメモ化済みのdailyAverageProviderから取得する。
 class RecentTrendChart extends ConsumerWidget {
   const RecentTrendChart({super.key, this.days = 30});

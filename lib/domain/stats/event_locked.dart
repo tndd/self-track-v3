@@ -20,7 +20,7 @@ class EventLockedPoint {
   final int sampleCount;
 }
 
-/// design.md §4.3・plan.md M6: [tagId]の各発生時刻を0として、-12h〜+12hを
+/// spec.md 第I部 §4.3・第II部 M6: [tagId]の各発生時刻を0として、-12h〜+12hを
 /// 1時間刻みでcondition曲線（12時間減衰の仮想ポイント込み）からサンプリングし、
 /// 全発生回について平均する。
 ///

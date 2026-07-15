@@ -41,7 +41,7 @@ const _pivotLineColors = [
 }
 
 /// mock/calendar.html の「7日間の傾向」セクション：直近7日の日次平均の
-/// スパークラインと、前週（7〜13日前）平均との比較（plan.md M5）。
+/// スパークラインと、前週（7〜13日前）平均との比較（spec.md M5）。
 class TrendSection extends StatelessWidget {
   const TrendSection({
     super.key,

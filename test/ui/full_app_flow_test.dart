@@ -6,7 +6,7 @@ import 'package:self_track_v3/data/database.dart';
 import 'package:self_track_v3/providers/database_providers.dart';
 import 'package:self_track_v3/ui/app.dart';
 
-/// plan.md §7 手動QAチェックリスト 8番:
+/// spec.md §7 手動QAチェックリスト 8番:
 /// 「Settings の全削除後、全画面が空状態表示になりクラッシュしない」を検証する。
 void main() {
   Future<void> flushPendingTimers(WidgetTester tester) async {

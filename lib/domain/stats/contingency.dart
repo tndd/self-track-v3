@@ -1,7 +1,7 @@
 import '../dates.dart';
 import '../models.dart';
 
-/// design.md・draft.mdの「基本的には'症状'がyになる想定」に基づき、
+/// spec.md 第I部 §2.1のデータ分類に基づき、
 /// group名がこの値のタグをsymptom、それ以外をactionとして扱う。
 /// 統計のy/x振り分けはdomain層の仕様であり、UI側はこの定数を参照する。
 const kSymptomGroupName = '症状';
@@ -13,7 +13,7 @@ const kSymptomGroupName = '症状';
 /// | action日   |     a     |     b      |
 /// | ¬action日  |     c     |     d      |
 ///
-/// design.md §4.3・plan.md M6: v1.0では時間窓ではなく「日単位の共起」で
+/// spec.md 第I部 §4.3・第II部 M6: v1.0では時間窓ではなく「日単位の共起」で
 /// 集計する。「観測日」＝レコードが1件以上存在する日のみを対象とし、
 /// アプリを開いていない（記録が無い）日は「actionが起きなかった」とは
 /// 見なさない。
@@ -104,7 +104,7 @@ ContingencyTable buildDayContingencyTable({
   );
 }
 
-/// design.md §4.3・plan.md §6.4: オッズ比。分割表にゼロのセルがある場合は
+/// spec.md 第I部 §4.3・第II部 §6.4: オッズ比。分割表にゼロのセルがある場合は
 /// Haldane補正（各セル+0.5）を適用する（Fisherの検定自体には補正を使わない）。
 double oddsRatio(ContingencyTable table) {
   final hasZero = table.a == 0 || table.b == 0 || table.c == 0 || table.d == 0;
@@ -115,7 +115,7 @@ double oddsRatio(ContingencyTable table) {
   return (a * d) / (b * c);
 }
 
-/// design.md §4.3: リフト値 = P(symptom日|action日) / P(symptom日)。
+/// spec.md §4.3: リフト値 = P(symptom日|action日) / P(symptom日)。
 /// actionまたはsymptomの観測日が無い場合はnullを返す。
 double? liftValue(ContingencyTable table) {
   final actionDays = table.actionDayCount;

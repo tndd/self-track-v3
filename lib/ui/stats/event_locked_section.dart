@@ -6,8 +6,8 @@ import '../../data/database.dart';
 import '../../providers/database_providers.dart';
 import '../../providers/stats_providers.dart';
 
-/// plan.md M6「タグを1つ選ぶ → イベントロック平均グラフ」。
-/// アーカイブ済みタグも選択候補に含める（design.md §5.4: 過去の記録は
+/// spec.md M6「タグを1つ選ぶ → イベントロック平均グラフ」。
+/// アーカイブ済みタグも選択候補に含める（spec.md §5.4: 過去の記録は
 /// 統計にも引き続き利用できる）。計算はproviderにメモ化されている。
 class EventLockedSection extends ConsumerWidget {
   const EventLockedSection({super.key});

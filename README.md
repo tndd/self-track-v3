@@ -1,7 +1,8 @@
 # self-track-v3
 
 体調管理と行動ログを記録し、行動と体調の因果関係を分析するためのFlutterアプリ。
-仕様は `docs/design.md`、実装計画は `docs/plan.md` を参照。
+製品仕様と実装計画は `docs/spec.md`、実行可能なフロントエンドモックは
+`docs/frontend-spec.html` を参照。
 
 ## セットアップ
 
