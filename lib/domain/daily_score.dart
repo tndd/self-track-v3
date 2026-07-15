@@ -2,7 +2,7 @@ import 'condition_series.dart';
 import 'dates.dart';
 import 'models.dart';
 
-/// design.md §4.2: 指定日(00:00〜24:00)の体調スコアを台形公式で積分し、
+/// spec.md §4.2: 指定日(00:00〜24:00)の体調スコアを台形公式で積分し、
 /// 経過時間で正規化した平均値（-2〜2の連続値）として返す。
 ///
 /// [allRecordsAscending] はアプリ全体のレコードをtimestamp昇順に並べたもの
@@ -21,7 +21,7 @@ import 'models.dart';
 /// 渡すと「対象日にレコードがあるか」の判定に全レコード走査の代わりに
 /// 集合参照を使う。複数日をまとめて計算する呼び出し側向けの前計算。
 ///
-/// 対象日に実レコードが1件も無い場合はnullを返す（design.md §4.2および
+/// 対象日に実レコードが1件も無い場合はnullを返す（spec.md §4.2および
 /// Calendar画面では「記録の無い日」として空白表示にするため）。
 double? computeDailyAverage({
   required List<RecordWithTags> allRecordsAscending,
@@ -68,7 +68,7 @@ double? computeDailyAverage({
   return area / totalHours;
 }
 
-/// plan.md §6.2: 日次平均（連続値）をカレンダー等の5段階表示に丸める規則。
+/// spec.md §6.2: 日次平均（連続値）をカレンダー等の5段階表示に丸める規則。
 /// 四捨五入した上でDB値域(-2〜2)にクランプする。
 int roundDailyScore(double score) => score.round().clamp(-2, 2);
 

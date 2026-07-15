@@ -145,7 +145,7 @@ void main() {
     await flushPendingTimers(tester);
   });
 
-  testWidgets('アーカイブ済みタグも統計の対象に残り続ける（design.md §5.4）', (tester) async {
+  testWidgets('アーカイブ済みタグも統計の対象に残り続ける（spec.md §5.4）', (tester) async {
     final coffeeId = await db.tagsDao.createTag(name: 'コーヒー', group: '行動');
     await db.tagsDao.createTag(name: '頭痛', group: '症状');
     await db.recordsDao.createRecord(

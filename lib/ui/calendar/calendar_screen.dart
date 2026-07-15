@@ -54,7 +54,7 @@ class CalendarScreen extends ConsumerWidget {
           for (var i = 6; i >= 0; i--) todayStart.subtract(Duration(days: i)),
         ];
         final last7Scores = [for (final d in last7Days) scoreFor(d)];
-        // plan.md M5「7日平均と前週比」: 前週（7〜13日前）の平均。
+        // spec.md M5「7日平均と前週比」: 前週（7〜13日前）の平均。
         final prevWeekAverage = averageScore(
           [
             for (var i = 13; i >= 7; i--)

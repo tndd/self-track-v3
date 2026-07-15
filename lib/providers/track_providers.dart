@@ -50,7 +50,7 @@ void requestDateJump(WidgetRef ref, DateTime day) {
 }
 
 /// Composerの「最近使ったタグ」候補。レコードのタグを新しい順・重複除去で
-/// 最大8件。アーカイブ済みタグは選択候補に出さない（design.md §5.1）。
+/// 最大8件。アーカイブ済みタグは選択候補に出さない（spec.md §5.1）。
 /// 常駐して監視済みのallRecordsProviderから導出することで、専用の
 /// 直近Nレコード監視クエリを追加せずに済む。
 final recentTagsProvider = Provider.autoDispose<List<TagRef>>((ref) {

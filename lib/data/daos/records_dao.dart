@@ -13,7 +13,7 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
 
   static const _uuid = Uuid();
 
-  /// レコードとタグ紐付けを1トランザクションで作成する。タグは常に value=1.0（design.md §3.3）。
+  /// レコードとタグ紐付けを1トランザクションで作成する。タグは常に value=1.0（spec.md §3.3）。
   Future<String> createRecord({
     required DateTime timestamp,
     String? comment,
@@ -51,7 +51,7 @@ class RecordsDao extends DatabaseAccessor<AppDatabase> with _$RecordsDaoMixin {
   }) {
     final now = DateTime.now();
     return transaction(() async {
-      // plan.md M1: isDirtyは書き込み時にDAO内で自動設定する。更新も
+      // spec.md M1: isDirtyは書き込み時にDAO内で自動設定する。更新も
       // 未同期扱いに戻さないと、将来のクラウド同期で更新漏れが発生する。
       await (update(records)..where((r) => r.id.equals(id))).write(
         RecordsCompanion(

@@ -1,11 +1,11 @@
 import 'package:drift/drift.dart';
 
-/// 体調・コメントの親レコード（design.md §3.1）。
+/// 体調・コメントの親レコード（spec.md §3.1）。
 /// `value` は -2〜2 のDB値。UI表示（1〜5）への変換は ui/theme.dart で行う。
 /// Dartの言語機能「レコード（タプル）」との混同を避けるため、
 /// 生成される行データクラス名は明示的に `RecordEntry` にする。
 ///
-/// plan.md M1: 期間クエリ・時刻順ソートが全画面の基盤になるため、
+/// spec.md M1: 期間クエリ・時刻順ソートが全画面の基盤になるため、
 /// timestampにインデックスを張る（schema v3で追加）。
 @TableIndex(name: 'idx_records_timestamp', columns: {#timestamp})
 @DataClassName('RecordEntry')
@@ -21,7 +21,7 @@ class Records extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// タグマスタ（design.md §3.2）。
+/// タグマスタ（spec.md §3.2）。
 /// `group` はSQLite予約語のため、DB上の列名は `tag_group` にリネームする。
 @DataClassName('Tag')
 class Tags extends Table {
@@ -38,7 +38,7 @@ class Tags extends Table {
   Set<Column> get primaryKey => {id};
 }
 
-/// レコードとタグの中間テーブル（design.md §3.3）。
+/// レコードとタグの中間テーブル（spec.md §3.3）。
 /// v1.0では `value` の入力UIを設けず、常に1.0で作成する。
 @DataClassName('RecordTagEntry')
 class RecordTags extends Table {

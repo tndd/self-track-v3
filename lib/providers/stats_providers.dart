@@ -11,7 +11,7 @@ import 'score_providers.dart';
 /// イベントロック平均グラフで現在選択中のタグID。未選択ならnull。
 final selectedEventTagIdProvider = StateProvider<String?>((ref) => null);
 
-/// plan.mdの想定閾値: 双方の観測日数がこれ未満なら「データ不足」とする。
+/// spec.mdの想定閾値: 双方の観測日数がこれ未満なら「データ不足」とする。
 const kMinPairObservationDays = 3;
 
 /// 行動タグ×症状タグ1ペア分の統計結果。
@@ -34,9 +34,9 @@ class TagPairStat {
   final double? odds;
 }
 
-/// plan.md M6「行動タグ×症状タグの関連リスト（リフト値降順、p値・発生回数併記）」。
+/// spec.md M6「行動タグ×症状タグの関連リスト（リフト値降順、p値・発生回数併記）」。
 ///
-/// - design.md §5.4「過去の記録は保持され、統計にも引き続き利用できる」に
+/// - spec.md §5.4「過去の記録は保持され、統計にも引き続き利用できる」に
 ///   従い、アーカイブ済みタグも対象に含める（activeTagsではなくallTags）。
 /// - タグ→発生日の集合を1パスで前計算し、ペアごとの全レコード再走査を避ける。
 /// - providerとしてメモ化することで、レコード・タグが変化した時のみ

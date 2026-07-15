@@ -46,7 +46,7 @@ class TagsDao extends DatabaseAccessor<AppDatabase> with _$TagsDaoMixin {
     );
   }
 
-  /// タグの削除はアーカイブで行う（design.md §3.2）。過去のrecord_tagsは保持される。
+  /// タグの削除はアーカイブで行う（spec.md §3.2）。過去のrecord_tagsは保持される。
   Future<void> archiveTag(String id) => _setArchived(id, true);
 
   Future<void> unarchiveTag(String id) => _setArchived(id, false);
