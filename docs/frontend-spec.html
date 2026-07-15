@@ -2448,13 +2448,38 @@ function toggleComposerTags() {
 }
 
 function closeAllOverlays() {
-  document.getElementById("composer-panel").classList.remove("active");
+  resetComposerState();
   document.getElementById("track-action-sheet").classList.remove("active");
   document.getElementById("tags-modal").classList.remove("active");
   document.getElementById("settings-confirm-modal").classList.remove("active");
   document.getElementById("scrim").classList.remove("active");
   document.querySelectorAll(".spec-table tr").forEach(tr => tr.classList.remove("highlighted"));
   EDITING_RECORD_ID = null;
+}
+
+// Composerを閉じた理由にかかわらず、新規入力の初期状態へ戻す。
+function resetComposerState() {
+  SELECTED_TAGS = [];
+  document.getElementById("composer-comment").value = "";
+  document.querySelectorAll(".composer-status-pill").forEach(pill => {
+    pill.classList.toggle("selected", pill.getAttribute("data-score") === "0");
+  });
+
+  const selector = document.getElementById("composer-tag-selector");
+  selector.classList.remove("active");
+
+  const panel = document.getElementById("composer-panel");
+  panel.className = "plus-panel mini";
+
+  const toggleBtn = document.getElementById("composer-tag-toggle-btn");
+  toggleBtn.classList.remove("ghost");
+  toggleBtn.innerText = "タグを追加";
+
+  const sendBtn = document.querySelector(".composer-bar-send");
+  sendBtn.className = "composer-bar-send";
+  sendBtn.style.background = "";
+
+  renderComposerSelectedChips();
 }
 
 // --- RENDERING CORE ---
@@ -2724,12 +2749,6 @@ function saveComposerRecord() {
     logState(`Created new record with ID ${newId}`);
   }
 
-  // Clear states
-  SELECTED_TAGS = [];
-  document.getElementById("composer-comment").value = "";
-  document.querySelectorAll(".composer-status-pill").forEach(p => p.classList.remove("selected"));
-  document.querySelector('.composer-status-pill[data-score="0"]').classList.add("selected");
-  
   closeAllOverlays();
   renderApp();
 }
