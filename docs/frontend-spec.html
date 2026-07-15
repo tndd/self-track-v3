@@ -2697,7 +2697,8 @@ function saveComposerRecord() {
     if (rec) {
       rec.value = value;
       rec.comment = comment;
-      DB.record_tags = DB.record_tags.filter(rt => rt.record_id === EDITING_RECORD_ID);
+      // 編集対象の古い紐付けだけを除去し、他レコードのタグは保持する。
+      DB.record_tags = DB.record_tags.filter(rt => rt.record_id !== EDITING_RECORD_ID);
       SELECTED_TAGS.forEach(tId => {
         DB.record_tags.push({ record_id: EDITING_RECORD_ID, tag_id: tId, value: 1.0 });
       });
