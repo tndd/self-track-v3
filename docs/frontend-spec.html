@@ -1574,6 +1574,12 @@ body {
             <!-- Cells injected by JS -->
           </div>
 
+          <div class="empty-state" id="calendar-empty-state" style="display:none; padding:12px 20px;">
+            <span class="empty-state-icon">📅</span>
+            <span class="empty-state-title">カレンダーに記録がありません</span>
+            <span class="empty-state-desc">Trackから最初の体調記録を作成すると日次スコアが表示されます。</span>
+          </div>
+
           <div class="cal-bottom-stats">
             <div class="cal-section-title">今月の割合</div>
             <div class="donut-row">
@@ -1615,7 +1621,12 @@ body {
 
         <!-- SCREEN: STATS -->
         <div class="screen-content" id="screen-stats">
-          <div class="stats-container">
+          <div class="empty-state" id="stats-empty-state" style="display:none;">
+            <span class="empty-state-icon">📊</span>
+            <span class="empty-state-title">統計データがありません</span>
+            <span class="empty-state-desc">体調記録とタグを作成すると分析結果が表示されます。</span>
+          </div>
+          <div class="stats-container" id="stats-container">
             <!-- 30 Days Trend -->
             <div class="stats-card">
               <div class="stats-card-title">30日間の体調推移</div>
@@ -2883,6 +2894,9 @@ function adjustMonth(offset) {
 function renderCalendar() {
   const monthTitle = document.getElementById("cal-month-title");
   monthTitle.innerText = `${VIEW_DATE.getFullYear()}年${VIEW_DATE.getMonth() + 1}月`;
+  const hasRecords = DB.records.length > 0;
+  document.getElementById("calendar-empty-state").style.display = hasRecords ? "none" : "flex";
+  document.querySelector("#screen-calendar .cal-bottom-stats").style.display = hasRecords ? "" : "none";
   
   const grid = document.getElementById("calendar-grid");
   
@@ -3091,16 +3105,10 @@ function renderCalendarBottomStats(year, month) {
 // --- STATS SCREEN LOGIC ---
 
 function renderStats() {
-  if (DB.records.length === 0) {
-    document.getElementById("screen-stats").innerHTML = `
-      <div class="empty-state">
-        <span class="empty-state-icon">📊</span>
-        <span class="empty-state-title">統計データがありません</span>
-        <span class="empty-state-desc">統計分析には、少なくともいくつかの体調評価とアクション/症状のタグ記録が必要です。</span>
-      </div>
-    `;
-    return;
-  }
+  const hasRecords = DB.records.length > 0;
+  document.getElementById("stats-empty-state").style.display = hasRecords ? "none" : "flex";
+  document.getElementById("stats-container").style.display = hasRecords ? "" : "none";
+  if (!hasRecords) return;
 
   render30DaysTrendChart();
 
@@ -3578,9 +3586,11 @@ function archiveTag(archive) {
 // --- SETTINGS CONTROLS ---
 
 function clearAllDatabase() {
-  DB.records = [];
+  // 外部キーの依存順に中間テーブルから消去し、タグマスタまで空にする。
   DB.record_tags = [];
-  logState("Erase command run. Database initialized empty.");
+  DB.records = [];
+  DB.tags = [];
+  logState("All record_tags, records, and tags were erased.");
   
   closeAllOverlays();
   renderApp();
