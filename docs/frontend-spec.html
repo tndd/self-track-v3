@@ -888,25 +888,6 @@ body {
 .cal-dot.s5 { background: var(--score-5); color: #fff; }
 
 /* Ring for multi-entries */
-.cal-dot.ring {
-  background: transparent;
-}
-.cal-dot.ring .ring-bg {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-}
-.cal-dot.ring .ring-hole {
-  position: absolute;
-  inset: 4px;
-  border-radius: 50%;
-  background: var(--bg-phone-screen);
-}
-.cal-dot.ring .day-num {
-  position: relative;
-  z-index: 2;
-}
-
 .cal-bottom-stats {
   padding: 16px;
   border-top: 1px solid var(--border-phone-screen);
@@ -1608,6 +1589,7 @@ body {
                 <div class="donut-center-text">
                   <span class="donut-avg-val" id="donut-avg-val">3.0</span>
                   <span class="donut-avg-lbl">平均</span>
+                  <span class="donut-avg-lbl" id="donut-change-badge">前月比 -</span>
                 </div>
               </div>
               <div class="donut-legend" id="donut-legend">
@@ -1863,11 +1845,11 @@ for (var tagId in selectedTagIds) {
         月単位で体調スコアの変化を大局的に捉えるための画面です。
       </p>
 
-      <h3>1. 日次スコアの5段階丸めと多色リング</h3>
+      <h3>1. 日次AUCの5段階丸めと単色ドット</h3>
       <ul>
-        <li><strong>単一レコードの日</strong>: そのレコードの体調値 (-2〜2) を 1〜5 のカラーでセルに塗りつぶします。</li>
-        <li><strong>複数レコードの日 / 積分計算日</strong>: 1日の平均体調値を台形公式 (AUC) で求め、その値を四捨五入して色を決定します。</li>
-        <li><strong>多色リング (Ring)</strong>: 1日に異なる属性のタグや大きく異なる体調の記録が複数ある場合、UIの表現力向上として、Conic Gradient を用いて周囲に複数の体調色を環状にグラデーション描画します（案3）。</li>
+        <li><strong>記録のある日</strong>: 00:00〜翌日00:00の日次平均AUCを共通関数で求め、5段階へ丸めた単色ドットで表示します。</li>
+        <li><strong>記録のない日</strong>: 日次スコアは null とし、日付数字だけの空白セルで表示して月次集計からも除外します。</li>
+        <li><strong>表示の正本</strong>: 生レコードごとの多色リングは使わず、月グリッド・月平均・割合・前月比を同じ日次AUCから算出します。</li>
       </ul>
 
       <h3>2. 「今月の割合」ドーナツチャート</h3>
@@ -2187,170 +2169,62 @@ function fishersExactTest(a, b, c, d) {
   return Math.min(1.0, pSum);
 }
 
-// Generate condition points series including 12h-decay virtual points
-function generateSeriesWithDecay(records, rangeStart, rangeEnd) {
-  if (records.length === 0) return [];
-  
-  let series = [];
-  
-  // Add first point
-  series.push({ t: records[0].timestamp.getTime(), val: records[0].value });
-  
-  for (let i = 0; i < records.length - 1; i++) {
-    const cur = records[i];
-    const next = records[i+1];
-    const diff = next.timestamp.getTime() - cur.timestamp.getTime();
-    
-    series.push({ t: cur.timestamp.getTime(), val: cur.value });
-    
-    if (diff > 12 * 3600 * 1000) {
-      // Insert virtual point (value = 0) at cur + 12h
-      series.push({ t: cur.timestamp.getTime() + 12 * 3600 * 1000, val: 0 });
-    }
-  }
-  
-  // Add last point
-  const last = records[records.length - 1];
-  series.push({ t: last.timestamp.getTime(), val: last.value });
-  
-  // Check decay to rangeEnd
-  if (rangeEnd) {
-    const diffEnd = rangeEnd.getTime() - last.timestamp.getTime();
-    if (diffEnd > 12 * 3600 * 1000) {
-      series.push({ t: last.timestamp.getTime() + 12 * 3600 * 1000, val: 0 });
-      series.push({ t: rangeEnd.getTime(), val: 0 });
-    }
-  }
-  
-  // Sort and remove duplicates on same time
-  series.sort((a,b) => a.t - b.t);
-  
-  // Filter unique times
-  let uniqueSeries = [];
-  if (series.length > 0) {
-    uniqueSeries.push(series[0]);
-    for (let i = 1; i < series.length; i++) {
-      if (series[i].t !== series[i-1].t) {
-        uniqueSeries.push(series[i]);
-      }
-    }
-  }
-  
-  return uniqueSeries;
+const DECAY_DURATION_MS = 12 * 60 * 60 * 1000;
+const DAY_DURATION_MS = 24 * 60 * 60 * 1000;
+
+// 指定時刻以前で最後の実レコードだけを起点にし、12時間後は次の記録まで0を返す。
+function getConditionValueAt(records, targetTime) {
+  const targetMs = targetTime instanceof Date ? targetTime.getTime() : targetTime;
+  const preceding = records
+    .filter(record => record.timestamp.getTime() <= targetMs)
+    .sort((a, b) => b.timestamp - a.timestamp)[0];
+  if (!preceding) return 0;
+  const elapsed = targetMs - preceding.timestamp.getTime();
+  if (elapsed >= DECAY_DURATION_MS) return 0;
+  return preceding.value * (1 - elapsed / DECAY_DURATION_MS);
 }
 
-// Calculate daily score using Trapezoidal integration
+// 一つの実レコードから続く減衰曲線を区間内で台形積分し、12時間以降は面積0とする。
+function integrateDecayInterval(record, startMs, endMs) {
+  if (!record || endMs <= startMs) return 0;
+  const decayEndMs = record.timestamp.getTime() + DECAY_DURATION_MS;
+  const effectiveEndMs = Math.min(endMs, decayEndMs);
+  if (effectiveEndMs <= startMs) return 0;
+  const startValue = getConditionValueAt([record], startMs);
+  const endValue = getConditionValueAt([record], effectiveEndMs);
+  return ((startValue + endValue) / 2) * (effectiveEndMs - startMs);
+}
+
+// 実レコードがある日の00:00〜翌日00:00を積分し、24時間で正規化した平均値を返す。
 function calculateDailyScore(records, date) {
-  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, 0, 0);
-  const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
-  
-  // Find all records within this day
-  const dayRecords = records.filter(r => r.timestamp >= dayStart && r.timestamp <= dayEnd);
-  
-  // If no records at all, we look at the immediate preceding and succeeding record to interpolate
-  if (dayRecords.length === 0) {
-    const preceding = records.filter(r => r.timestamp < dayStart).pop();
-    const succeeding = records.find(r => r.timestamp > dayEnd);
-    
-    if (!preceding && !succeeding) return null; // No context at all
-    
-    // Check 12-hour decay from preceding
-    if (preceding) {
-      const decayTime = preceding.timestamp.getTime() + 12 * 3600 * 1000;
-      if (decayTime < dayStart.getTime()) {
-        return 0; // Already decayed to normal
-      }
-      // Linear interpolate between preceding and decay point
-      const ratio = (dayStart.getTime() - preceding.timestamp.getTime()) / (12 * 3600 * 1000);
-      const valAtStart = preceding.value * (1 - ratio);
-      return valAtStart; 
-    }
-    return 0;
-  }
-  
-  // Form points array for trapezoidal integration
-  let points = [];
-  
-  // 1. Estimate 00:00 starting value
-  let valStart = 0;
-  const preceding = records.filter(r => r.timestamp < dayStart).pop();
-  if (preceding) {
-    const decayTime = preceding.timestamp.getTime() + 12 * 3600 * 1000;
-    if (decayTime > dayStart.getTime()) {
-      const ratio = (dayStart.getTime() - preceding.timestamp.getTime()) / (12 * 3600 * 1000);
-      valStart = preceding.value * (1 - ratio);
-    }
-  } else if (dayRecords.length > 0) {
-    valStart = dayRecords[0].value;
-  }
-  points.push({ t: dayStart.getTime(), val: valStart });
-  
-  // 2. Add all daily records & virtual decay points inside day
-  for (let i = 0; i < dayRecords.length; i++) {
-    points.push({ t: dayRecords[i].timestamp.getTime(), val: dayRecords[i].value });
-    
-    // Check internal decay before next record
-    if (i < dayRecords.length - 1) {
-      const nextTime = dayRecords[i+1].timestamp.getTime();
-      const curTime = dayRecords[i].timestamp.getTime();
-      if (nextTime - curTime > 12 * 3600 * 1000) {
-        points.push({ t: curTime + 12 * 3600 * 1000, val: 0 });
-      }
-    }
-  }
-  
-  // 3. Estimate 24:00 ending value
-  let valEnd = 0;
-  const lastRecord = dayRecords[dayRecords.length - 1];
-  const succeeding = records.find(r => r.timestamp > dayEnd);
-  
-  if (succeeding) {
-    const nextRecTime = succeeding.timestamp.getTime();
-    const curTime = lastRecord.timestamp.getTime();
-    if (nextRecTime - curTime > 12 * 3600 * 1000) {
-      // Decays before next record
-      const decayTime = curTime + 12 * 3600 * 1000;
-      if (decayTime < dayEnd.getTime()) {
-        valEnd = 0;
-      } else {
-        const ratio = (dayEnd.getTime() - curTime) / (12 * 3600 * 1000);
-        valEnd = lastRecord.value * (1 - ratio);
-      }
-    } else {
-      // Interpolate between lastRecord and succeeding
-      const ratio = (dayEnd.getTime() - curTime) / (nextRecTime - curTime);
-      valEnd = lastRecord.value + (succeeding.value - lastRecord.value) * ratio;
-    }
-  } else {
-    // Decays after last record
-    const decayTime = lastRecord.timestamp.getTime() + 12 * 3600 * 1000;
-    if (decayTime < dayEnd.getTime()) {
-      valEnd = 0;
-    } else {
-      const ratio = (dayEnd.getTime() - lastRecord.timestamp.getTime()) / (12 * 3600 * 1000);
-      valEnd = lastRecord.value * (1 - ratio);
-    }
-  }
-  points.push({ t: dayEnd.getTime(), val: valEnd });
-  
-  // Sort points by time
-  points.sort((a,b) => a.t - b.t);
-  
-  // Integrate using Trapezoidal rule
-  let totalArea = 0;
-  for (let i = 0; i < points.length - 1; i++) {
-    const dt = (points[i+1].t - points[i].t) / (24 * 3600 * 1000); // fraction of a day
-    const avgVal = (points[i].val + points[i+1].val) / 2;
-    totalArea += avgVal * dt;
-  }
-  
-  return totalArea;
+  const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  const sortedRecords = [...records].sort((a, b) => a.timestamp - b.timestamp);
+  const dayRecords = sortedRecords.filter(record =>
+    record.timestamp >= dayStart && record.timestamp < dayEnd
+  );
+  if (dayRecords.length === 0) return null;
+
+  let activeRecord = sortedRecords.filter(record => record.timestamp < dayStart).pop() || null;
+  let cursorMs = dayStart.getTime();
+  let area = 0;
+
+  dayRecords.forEach(record => {
+    const recordMs = record.timestamp.getTime();
+    area += integrateDecayInterval(activeRecord, cursorMs, recordMs);
+    activeRecord = record;
+    cursorMs = recordMs;
+  });
+  area += integrateDecayInterval(activeRecord, cursorMs, dayEnd.getTime());
+
+  return area / DAY_DURATION_MS;
 }
 
 // Convert DB condition (-2 to 2) to UI level (1 to 5)
 function dbToUiScore(val) {
   if (val === null) return null;
-  return Math.round(val + 3);
+  const rounded = Math.sign(val) * Math.round(Math.abs(val));
+  return Math.max(1, Math.min(5, rounded + 3));
 }
 
 // --- APPLICATION ENGINE ---
@@ -3032,54 +2906,23 @@ function renderCalendar() {
     grid.appendChild(cell);
   }
 
-  const colorMap = {
-    1: "var(--score-1)",
-    2: "var(--score-2)",
-    3: "var(--score-3)",
-    4: "var(--score-4)",
-    5: "var(--score-5)"
-  };
-
   for (let d = 1; d <= totalDays; d++) {
     const cellDate = new Date(year, month, d);
     const cell = document.createElement("div");
     cell.className = "cal-cell";
-    
-    const dayStart = new Date(year, month, d, 0, 0, 0);
-    const dayEnd = new Date(year, month, d, 23, 59, 59);
-    const dayRecs = DB.records.filter(r => r.timestamp >= dayStart && r.timestamp <= dayEnd);
     
     cell.onclick = () => {
       VIEW_DATE = cellDate;
       switchScreen("track");
     };
 
-    if (dayRecs.length === 0) {
+    const dailyScore = calculateDailyScore(DB.records, cellDate);
+    cell.dataset.dailyScore = dailyScore === null ? "" : String(dailyScore);
+    if (dailyScore === null) {
       cell.innerHTML = `<span class="cal-dot empty">${d}</span>`;
-    } else if (dayRecs.length === 1) {
-      const uiScore = dbToUiScore(dayRecs[0].value);
-      cell.innerHTML = `<span class="cal-dot s${uiScore}">${d}</span>`;
     } else {
-      const uniqueScores = [...new Set(dayRecs.map(r => dbToUiScore(r.value)))];
-      
-      let gradientStyle = "";
-      if (uniqueScores.length > 1) {
-        const segmentPercent = 100 / uniqueScores.length;
-        const colorStops = uniqueScores.map((s, idx) => {
-          return `${colorMap[s]} ${(idx * segmentPercent).toFixed(1)}% ${((idx + 1) * segmentPercent).toFixed(1)}%`;
-        }).join(", ");
-        gradientStyle = `background: conic-gradient(from -90deg, ${colorStops})`;
-      } else {
-        gradientStyle = `background: ${colorMap[uniqueScores[0]]}`;
-      }
-
-      cell.innerHTML = `
-        <span class="cal-dot ring">
-          <span class="ring-bg" style="${gradientStyle}"></span>
-          <span class="ring-hole"></span>
-          <span class="day-num">${d}</span>
-        </span>
-      `;
+      const uiScore = dbToUiScore(dailyScore);
+      cell.innerHTML = `<span class="cal-dot s${uiScore}">${d}</span>`;
     }
     grid.appendChild(cell);
   }
@@ -3087,25 +2930,43 @@ function renderCalendar() {
   renderCalendarBottomStats(year, month);
 }
 
+// 指定月の記録あり日だけを、共通の日次AUCと5段階評価の組として返す。
+function getMonthDailyScores(year, month) {
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const scores = [];
+  for (let day = 1; day <= daysInMonth; day++) {
+    const value = calculateDailyScore(DB.records, new Date(year, month, day));
+    if (value !== null) scores.push({ day, value, uiScore: dbToUiScore(value) });
+  }
+  return scores;
+}
+
 function renderCalendarBottomStats(year, month) {
   let counts = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-  let sumScore = 0;
-  let scoreCount = 0;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  
-  for (let d = 1; d <= daysInMonth; d++) {
-    const scoreVal = calculateDailyScore(DB.records, new Date(year, month, d));
-    if (scoreVal !== null) {
-      const uiScore = dbToUiScore(scoreVal);
-      counts[uiScore]++;
-      sumScore += (scoreVal + 3);
-      scoreCount++;
-    }
-  }
+  const monthScores = getMonthDailyScores(year, month);
+  monthScores.forEach(score => counts[score.uiScore]++);
 
-  const totalEvaluatedDays = scoreCount || 1;
-  const avgMonthVal = scoreCount ? (sumScore / scoreCount).toFixed(1) : "-";
+  const totalEvaluatedDays = monthScores.length || 1;
+  const avgMonthRaw = monthScores.length
+    ? monthScores.reduce((sum, score) => sum + score.value, 0) / monthScores.length
+    : null;
+  const avgMonthVal = avgMonthRaw === null ? "-" : (avgMonthRaw + 3).toFixed(1);
   document.getElementById("donut-avg-val").innerText = avgMonthVal;
+
+  const previousDate = new Date(year, month - 1, 1);
+  const previousScores = getMonthDailyScores(previousDate.getFullYear(), previousDate.getMonth());
+  const previousAverage = previousScores.length
+    ? previousScores.reduce((sum, score) => sum + score.value, 0) / previousScores.length
+    : null;
+  const monthChange = document.getElementById("donut-change-badge");
+  if (avgMonthRaw === null || previousAverage === null) {
+    monthChange.innerText = "前月比 -";
+  } else {
+    const difference = avgMonthRaw - previousAverage;
+    monthChange.innerText = Math.abs(difference) < 0.05
+      ? "前月比 ±0.0"
+      : `前月比 ${difference > 0 ? "+" : ""}${difference.toFixed(1)}`;
+  }
 
   let totalPercentAccum = 0;
   for (let s = 1; s <= 5; s++) {
@@ -3347,19 +3208,15 @@ function renderEventLockedChart(tagId) {
   let windowSums = Array(25).fill(0);
   let windowCounts = Array(25).fill(0);
   
-  const fullDecaySeries = generateSeriesWithDecay(DB.records);
-
   triggerRecords.forEach(tr => {
     const t0 = tr.timestamp.getTime();
     
     for (let h = -12; h <= 12; h++) {
       const targetTime = t0 + h * 3600 * 1000;
       
-      const val = interpolateConditionVal(fullDecaySeries, targetTime);
-      if (val !== null) {
-        windowSums[h + 12] += val;
-        windowCounts[h + 12]++;
-      }
+      const val = getConditionValueAt(DB.records, targetTime);
+      windowSums[h + 12] += val;
+      windowCounts[h + 12]++;
     }
   });
 
@@ -3408,29 +3265,6 @@ function renderEventLockedChart(tagId) {
   lblPlus12.setAttribute("fill", "var(--text-muted)");
   lblPlus12.innerHTML = "+12h";
   svg.appendChild(lblPlus12);
-}
-
-function interpolateConditionVal(decaySeries, targetTime) {
-  if (decaySeries.length === 0) return null;
-  if (targetTime < decaySeries[0].t) return 0;
-  if (targetTime > decaySeries[decaySeries.length - 1].t) {
-    const last = decaySeries[decaySeries.length - 1];
-    if (targetTime - last.t > 12 * 3600 * 1000) return 0;
-    const ratio = (targetTime - last.t) / (12 * 3600 * 1000);
-    return last.val * (1 - ratio);
-  }
-
-  for (let i = 0; i < decaySeries.length - 1; i++) {
-    const cur = decaySeries[i];
-    const next = decaySeries[i+1];
-    
-    if (targetTime >= cur.t && targetTime <= next.t) {
-      if (cur.t === next.t) return cur.val;
-      const ratio = (targetTime - cur.t) / (next.t - cur.t);
-      return cur.val + (next.val - cur.val) * ratio;
-    }
-  }
-  return 0;
 }
 
 // 固定5グループをStatsで扱う分析ロールへ対応付ける。
