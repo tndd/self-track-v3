@@ -3433,17 +3433,71 @@ function interpolateConditionVal(decaySeries, targetTime) {
   return 0;
 }
 
+// 固定5グループをStatsで扱う分析ロールへ対応付ける。
+function getTagAnalysisRole(group) {
+  if (group === "症状") return "symptom";
+  if (group === "薬" || group === "サプリ" || group === "運動") return "action";
+  if (group === "環境") return "event";
+  return null;
+}
+
+// 基準日を含む直近days日分の全暦日を、記録の有無にかかわらず返す。
+function getAnalysisCalendarDays(days, now = getAppNow()) {
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Array.from({ length: days }, (_, index) =>
+    new Date(end.getFullYear(), end.getMonth(), end.getDate() - (days - 1 - index))
+  );
+}
+
+// 対象暦日ごとに発生したタグ集合を作り、無記録日も空集合として保持する。
+function buildDailyTagSets(calendarDays) {
+  return calendarDays.map(day => {
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate() + 1);
+    const recordIds = new Set(DB.records
+      .filter(record => record.timestamp >= dayStart && record.timestamp < dayEnd)
+      .map(record => record.id));
+    return new Set(DB.record_tags
+      .filter(link => recordIds.has(link.record_id))
+      .map(link => link.tag_id));
+  });
+}
+
+// 全暦日のタグ発生集合からaction×symptomの2×2分割表を生成する。
+function buildContingencyTable(dailyTagSets, actionTagId, symptomTagId) {
+  let a = 0;
+  let b = 0;
+  let c = 0;
+  let d = 0;
+  dailyTagSets.forEach(tagIds => {
+    const hasAction = tagIds.has(actionTagId);
+    const hasSymptom = tagIds.has(symptomTagId);
+    if (hasAction && hasSymptom) a++;
+    else if (hasAction) b++;
+    else if (hasSymptom) c++;
+    else d++;
+  });
+  return { a, b, c, d };
+}
+
+// ゼロセルがある場合だけHaldane補正として全セルへ0.5を加えてオッズ比を返す。
+function calculateOddsRatio(a, b, c, d) {
+  const correction = [a, b, c, d].some(value => value === 0) ? 0.5 : 0;
+  return ((a + correction) * (d + correction)) /
+    ((b + correction) * (c + correction));
+}
+
 function renderCorrelationList() {
   const container = document.getElementById("stats-correlation-list");
   container.innerHTML = "";
 
-  const actionTags = DB.tags.filter(t => t.group === "薬" || t.group === "サプリ" || t.group === "運動");
-  const symptomTags = DB.tags.filter(t => t.group === "症状" || t.group === "環境");
+  const actionTags = DB.tags.filter(t => getTagAnalysisRole(t.group) === "action");
+  const symptomTags = DB.tags.filter(t => getTagAnalysisRole(t.group) === "symptom");
+  const analysisDays = getAnalysisCalendarDays(30);
+  const dailyTagSets = buildDailyTagSets(analysisDays);
+  const N_DAYS = analysisDays.length;
 
-  const allRecordDays = [...new Set(DB.records.map(r => r.timestamp.toDateString()))];
-  const N_DAYS = allRecordDays.length;
-
-  if (N_DAYS < 2) {
+  if (actionTags.length === 0 || symptomTags.length === 0) {
     container.innerHTML = `<div style="font-size:10px; color:var(--text-muted); text-align:center;">分析に十分な日数データがありません。</div>`;
     return;
   }
@@ -3452,25 +3506,7 @@ function renderCorrelationList() {
 
   actionTags.forEach(act => {
     symptomTags.forEach(sym => {
-      let a = 0, b = 0, c = 0, d = 0;
-      
-      allRecordDays.forEach(dayStr => {
-        const dayStart = new Date(dayStr);
-        dayStart.setHours(0,0,0,0);
-        const dayEnd = new Date(dayStr);
-        dayEnd.setHours(23,59,59,999);
-        
-        const dayRecIds = DB.records.filter(r => r.timestamp >= dayStart && r.timestamp <= dayEnd).map(r => r.id);
-        const dayTagIds = DB.record_tags.filter(rt => dayRecIds.includes(rt.record_id)).map(rt => rt.tag_id);
-        
-        const hasAct = dayTagIds.includes(act.id);
-        const hasSym = dayTagIds.includes(sym.id);
-
-        if (hasAct && hasSym) a++;
-        else if (hasAct && !hasSym) b++;
-        else if (!hasAct && hasSym) c++;
-        else d++;
-      });
+      const { a, b, c, d } = buildContingencyTable(dailyTagSets, act.id, sym.id);
 
       const totalActDays = a + b;
       const totalSymDays = a + c;
@@ -3481,6 +3517,7 @@ function renderCorrelationList() {
       }
 
       const pVal = fishersExactTest(a, b, c, d);
+      const oddsRatio = calculateOddsRatio(a, b, c, d);
 
       results.push({
         act: act,
@@ -3489,12 +3526,13 @@ function renderCorrelationList() {
         totalActDays: totalActDays,
         totalSymDays: totalSymDays,
         lift: lift,
+        oddsRatio: oddsRatio,
         pVal: pVal
       });
     });
   });
 
-  const threshold = 2;
+  const threshold = 3;
   results.sort((x, y) => y.lift - x.lift);
 
   const significantResults = results.filter(r => r.totalActDays >= threshold && r.totalSymDays >= threshold);
@@ -3517,7 +3555,8 @@ function renderCorrelationList() {
           Lift: ${r.lift.toFixed(2)}
         </div>
         <div class="assoc-details">
-          共起: ${r.a}日 / p値: ${r.pVal.toFixed(3)}
+          行動: ${r.totalActDays}日 / 症状: ${r.totalSymDays}日 / 共起: ${r.a}日<br>
+          OR: ${r.oddsRatio.toFixed(2)} / p値: ${r.pVal.toFixed(3)}
         </div>
       </div>
     `;
