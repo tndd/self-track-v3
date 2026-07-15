@@ -1940,12 +1940,21 @@ let DB = {
   record_tags: []
 };
 
+// デモデータの「現在」を一か所に固定し、画面間で同じ時計を参照する。
+const DEMO_CLOCK_ORIGIN = new Date("2026-07-11T13:00:00");
+const DEMO_CLOCK_STARTED_AT = Date.now();
+
+// モックを開いてからの経過時間だけ進む、注入可能なアプリ時刻を返す。
+function getAppNow() {
+  return new Date(DEMO_CLOCK_ORIGIN.getTime() + (Date.now() - DEMO_CLOCK_STARTED_AT));
+}
+
 // Seed records for the past 30 days (July 2026 Focus)
 function seedDatabase() {
   DB.records = [];
   DB.record_tags = [];
   
-  const now = new Date("2026-07-11T13:00:00");
+  const now = new Date(DEMO_CLOCK_ORIGIN);
   
   // Tag map for easy access
   const getTagId = name => DB.tags.find(t => t.name === name).id;
@@ -2247,14 +2256,15 @@ function dbToUiScore(val) {
 // --- APPLICATION ENGINE ---
 
 let CURRENT_SCREEN = "track";
-let VIEW_DATE = new Date("2026-07-11"); // Active calendar & timeline date
+let VIEW_DATE = new Date(DEMO_CLOCK_ORIGIN); // Active calendar & timeline date
 let SELECTED_TAGS = []; // Composer state
 let EDITING_RECORD_ID = null; // Hold record ID when long pressed
 
 function initApp() {
   seedDatabase();
   setupEventListeners();
-  renderApp();
+  // 初期表示も通常の画面切替経路を通し、ヘッダーと日付を同期する。
+  switchScreen(CURRENT_SCREEN);
 }
 
 function setupEventListeners() {
@@ -2502,6 +2512,10 @@ function renderTrackTimeline() {
   const container = document.getElementById("track-timeline");
   container.innerHTML = "";
 
+  // 過去日は閲覧専用とし、新規記録Composerを表示しない。
+  document.querySelector("#screen-track .composer-wrap").style.display =
+    isToday(VIEW_DATE) ? "" : "none";
+
   // Filter records for active date
   const dayStart = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), 0, 0, 0);
   const dayEnd = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), 23, 59, 59);
@@ -2731,8 +2745,8 @@ function saveComposerRecord() {
     }
   } else {
     // Create Mode
-    const nowReal = new Date();
-    const timestamp = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), nowReal.getHours(), nowReal.getMinutes(), nowReal.getSeconds());
+    // 表示中の日付ではなく、常にアプリの現在日時で新規記録する。
+    const timestamp = getAppNow();
     
     const newId = `rec_${Date.now()}`;
     DB.records.push({
@@ -3035,7 +3049,7 @@ function render30DaysTrendChart() {
 
   if (DB.records.length === 0) return;
 
-  const now = new Date("2026-07-11");
+  const now = getAppNow();
   let points = [];
   
   for (let i = 29; i >= 0; i--) {
@@ -3440,7 +3454,7 @@ function clearAllDatabase() {
 // --- UTIL FORMATTERS ---
 
 function isToday(d) {
-  const today = new Date();
+  const today = getAppNow();
   return d.getDate() === today.getDate() &&
          d.getMonth() === today.getMonth() &&
          d.getFullYear() === today.getFullYear();
