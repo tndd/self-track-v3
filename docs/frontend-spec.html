@@ -636,10 +636,12 @@ body {
 }
 .composer-selected-tags .chip {
   cursor: pointer;
+  border: 0;
+  font-family: inherit;
 }
-.composer-selected-tags .chip::after {
-  content: " ×";
-  opacity: 0.6;
+.composer-selected-tags .chip-remove {
+  margin-left: 4px;
+  opacity: 0.65;
 }
 
 .composer-tag-selector {
@@ -652,26 +654,85 @@ body {
 .composer-tag-selector.active {
   display: block;
 }
+.tag-selector-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tag-selector-toolbar-title {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.tag-selector-fullscreen-btn {
+  border: 1px solid var(--border-phone-screen);
+  background: var(--bg-phone);
+  color: var(--text-main);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
 .tag-selector-group {
   margin-bottom: 12px;
 }
 .tag-selector-group-title {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
   font-size: 9px;
   font-weight: 800;
   color: var(--text-muted);
   margin-bottom: 6px;
   text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
 }
 .tag-selector-chips {
   display: flex;
   flex-wrap: wrap;
 }
+.tag-selector-chips.collapsed {
+  display: none;
+}
 .tag-selector-chips .chip {
   cursor: pointer;
   transition: opacity 0.2s;
+  border: 0;
+  font-family: inherit;
 }
 .tag-selector-chips .chip.disabled {
   opacity: 0.4;
+}
+
+.tag-picker-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  flex-direction: column;
+  background: var(--bg-phone-screen);
+  padding: 38px 16px 16px;
+}
+.tag-picker-overlay.active {
+  display: flex;
+}
+.tag-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.tag-picker-title {
+  font-size: 16px;
+  font-weight: 850;
+}
+.tag-picker-list {
+  overflow-y: auto;
 }
 
 .composer-panel-footer {
@@ -1493,6 +1554,15 @@ body {
             </div>
           </div>
 
+          <!-- Composerから開く全画面タグ選択 -->
+          <div class="tag-picker-overlay" id="composer-tag-fullscreen-modal">
+            <div class="tag-picker-header">
+              <div class="tag-picker-title">タグを選択</div>
+              <button class="tag-selector-fullscreen-btn" id="composer-tag-fullscreen-close" type="button">完了</button>
+            </div>
+            <div class="tag-picker-list" id="composer-tag-fullscreen-list"></div>
+          </div>
+
         </div>
 
         <!-- SCREEN: CALENDAR -->
@@ -2279,6 +2349,7 @@ let CURRENT_SCREEN = "track";
 let VIEW_DATE = new Date(DEMO_CLOCK_ORIGIN); // Active calendar & timeline date
 let SELECTED_TAGS = []; // Composer state
 let EDITING_RECORD_ID = null; // Hold record ID when long pressed
+let OPEN_TAG_GROUP = null; // Composer内で展開中のタググループ
 
 function initApp() {
   seedDatabase();
@@ -2308,6 +2379,7 @@ function setupEventListeners() {
   document.getElementById("composer-trigger-btn").onclick = openComposer;
   document.getElementById("scrim").onclick = closeAllOverlays;
   document.getElementById("composer-tag-toggle-btn").onclick = toggleComposerTags;
+  document.getElementById("composer-tag-fullscreen-close").onclick = closeFullscreenTagPicker;
   
   // Composer state selections
   document.querySelectorAll(".composer-status-pill").forEach(pill => {
@@ -2444,6 +2516,7 @@ function toggleTheme() {
 
 // Open Composer Sheet overlay
 function openComposer() {
+  updateComposerTagAvailability();
   document.getElementById("composer-panel").classList.add("active");
   document.getElementById("scrim").classList.add("active");
   
@@ -2486,6 +2559,7 @@ function closeAllOverlays() {
   resetComposerState();
   document.getElementById("track-action-sheet").classList.remove("active");
   document.getElementById("track-delete-confirm-modal").classList.remove("active");
+  document.getElementById("composer-tag-fullscreen-modal").classList.remove("active");
   document.getElementById("tags-modal").classList.remove("active");
   document.getElementById("settings-confirm-modal").classList.remove("active");
   document.getElementById("scrim").classList.remove("active");
@@ -2496,6 +2570,7 @@ function closeAllOverlays() {
 // Composerを閉じた理由にかかわらず、新規入力の初期状態へ戻す。
 function resetComposerState() {
   SELECTED_TAGS = [];
+  OPEN_TAG_GROUP = null;
   document.getElementById("composer-comment").value = "";
   document.querySelectorAll(".composer-status-pill").forEach(pill => {
     pill.classList.toggle("selected", pill.getAttribute("data-score") === "0");
@@ -2516,11 +2591,13 @@ function resetComposerState() {
   sendBtn.style.background = "";
 
   renderComposerSelectedChips();
+  updateComposerTagAvailability();
 }
 
 // --- RENDERING CORE ---
 
 function renderApp() {
+  updateComposerTagAvailability();
   if (CURRENT_SCREEN === "track") {
     renderTrackTimeline();
   } else if (CURRENT_SCREEN === "calendar") {
@@ -2631,31 +2708,118 @@ function renderComposerSelectedChips() {
     const t = DB.tags.find(tag => tag.id === tId);
     if (!t) return;
     
-    const chip = document.createElement("span");
-    let grpClass = "default";
-    if (t.group === "症状") grpClass = "symptom";
-    if (t.group === "薬" || t.group === "サプリ") grpClass = "action";
-    if (t.group === "環境") grpClass = "factor";
-    
-    chip.className = `chip ${grpClass}`;
-    chip.innerText = t.name;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `chip ${getTagGroupClass(t)}`;
+    chip.setAttribute("aria-label", `${t.name}を選択解除`);
+    const name = document.createElement("span");
+    name.innerText = t.name;
+    const removeIcon = document.createElement("span");
+    removeIcon.className = "chip-remove";
+    removeIcon.setAttribute("aria-hidden", "true");
+    removeIcon.innerText = "×";
+    chip.append(name, removeIcon);
     chip.onclick = () => {
       SELECTED_TAGS = SELECTED_TAGS.filter(id => id !== tId);
-      renderComposerSelectedChips();
-      renderComposerTagSelector();
+      renderAllComposerTagChoices();
     };
     container.appendChild(chip);
   });
 }
 
+// 有効タグがない場合は、開いても空になるタグ追加導線を隠す。
+function updateComposerTagAvailability() {
+  const hasActiveTags = DB.tags.some(t => !t.isArchived);
+  const toggleBtn = document.getElementById("composer-tag-toggle-btn");
+  if (!toggleBtn) return;
+  toggleBtn.style.display = hasActiveTags ? "" : "none";
+  if (!hasActiveTags) {
+    document.getElementById("composer-tag-selector").classList.remove("active");
+  }
+}
+
+// record_tagsを記録日時の新しい順に辿り、重複なしの有効タグを最大8件返す。
+function getRecentActiveTags() {
+  const activeById = new Map(DB.tags.filter(t => !t.isArchived).map(t => [t.id, t]));
+  const recordById = new Map(DB.records.map(r => [r.id, r]));
+  const orderedLinks = DB.record_tags
+    .map(link => ({ link, record: recordById.get(link.record_id) }))
+    .filter(item => item.record && activeById.has(item.link.tag_id))
+    .sort((a, b) => b.record.timestamp - a.record.timestamp);
+  const recent = [];
+  const seen = new Set();
+  for (const { link } of orderedLinks) {
+    if (seen.has(link.tag_id)) continue;
+    seen.add(link.tag_id);
+    recent.push(activeById.get(link.tag_id));
+    if (recent.length === 8) break;
+  }
+  return recent;
+}
+
+// 固定グループをモックのタグ配色クラスへ対応付ける。
+function getTagGroupClass(tag) {
+  if (tag.group === "症状") return "symptom";
+  if (tag.group === "薬" || tag.group === "サプリ" || tag.group === "運動") return "action";
+  if (tag.group === "環境") return "factor";
+  return "default";
+}
+
+// 選択状態をaria属性と枠線の双方で示すタグ候補ボタンを生成する。
+function createTagChoiceChip(tag) {
+  const chip = document.createElement("button");
+  const isSelected = SELECTED_TAGS.includes(tag.id);
+  chip.type = "button";
+  chip.className = `chip ${getTagGroupClass(tag)} ${isSelected ? "selected" : ""}`;
+  chip.setAttribute("aria-pressed", String(isSelected));
+  chip.innerText = tag.name;
+  if (isSelected) chip.style.border = "1.5px solid var(--text-main)";
+  chip.onclick = () => {
+    SELECTED_TAGS = isSelected
+      ? SELECTED_TAGS.filter(id => id !== tag.id)
+      : [...SELECTED_TAGS, tag.id];
+    renderAllComposerTagChoices();
+  };
+  return chip;
+}
+
+// 指定されたタグ候補を共通形式でコンテナへ追加する。
+function appendTagChips(container, tags) {
+  tags.forEach(tag => container.appendChild(createTagChoiceChip(tag)));
+}
+
+// 最近使ったタグと固定5グループのアコーディオンをComposer内へ描画する。
 function renderComposerTagSelector() {
   const container = document.getElementById("composer-tag-selector");
   container.innerHTML = "";
-
-  // Group tags
   const activeTags = DB.tags.filter(t => !t.isArchived);
-  
-  // Show active tags grouped
+  if (activeTags.length === 0) return;
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "tag-selector-toolbar";
+  toolbar.innerHTML = `<span class="tag-selector-toolbar-title">タグ候補</span>`;
+  const fullscreenBtn = document.createElement("button");
+  fullscreenBtn.type = "button";
+  fullscreenBtn.className = "tag-selector-fullscreen-btn";
+  fullscreenBtn.setAttribute("aria-label", "全画面でタグを選択");
+  fullscreenBtn.innerText = "⛶ 全て表示";
+  fullscreenBtn.onclick = openFullscreenTagPicker;
+  toolbar.appendChild(fullscreenBtn);
+  container.appendChild(toolbar);
+
+  const recentTags = getRecentActiveTags();
+  if (recentTags.length > 0) {
+    const recentGroup = document.createElement("div");
+    recentGroup.className = "tag-selector-group";
+    recentGroup.innerHTML = `<div class="tag-selector-group-title" style="cursor:default">最近使ったタグ <span>${recentTags.length}/8</span></div>`;
+    const recentChips = document.createElement("div");
+    recentChips.className = "tag-selector-chips";
+    appendTagChips(recentChips, recentTags);
+    recentGroup.appendChild(recentChips);
+    container.appendChild(recentGroup);
+  }
+
+  // 固定5グループは一度に一つだけ開くアコーディオンとして表示する。
   const groups = ["症状", "薬", "サプリ", "運動", "環境"];
   groups.forEach(groupName => {
     const groupTags = activeTags.filter(t => t.group === groupName);
@@ -2664,45 +2828,63 @@ function renderComposerTagSelector() {
     const grpDiv = document.createElement("div");
     grpDiv.className = "tag-selector-group";
     
-    const title = document.createElement("div");
+    const title = document.createElement("button");
+    title.type = "button";
     title.className = "tag-selector-group-title";
-    title.innerText = groupName;
+    const isOpen = OPEN_TAG_GROUP === groupName;
+    title.setAttribute("aria-expanded", String(isOpen));
+    title.innerHTML = `<span>${groupName} (${groupTags.length})</span><span aria-hidden="true">${isOpen ? "−" : "+"}</span>`;
+    title.onclick = () => {
+      OPEN_TAG_GROUP = isOpen ? null : groupName;
+      renderComposerTagSelector();
+    };
     grpDiv.appendChild(title);
     
     const chipsDiv = document.createElement("div");
-    chipsDiv.className = "tag-selector-chips";
-    
-    groupTags.forEach(t => {
-      const isSelected = SELECTED_TAGS.includes(t.id);
-      const chip = document.createElement("span");
-      
-      let grpClass = "default";
-      if (t.group === "症状") grpClass = "symptom";
-      if (t.group === "薬" || t.group === "サプリ") grpClass = "action";
-      if (t.group === "環境") grpClass = "factor";
-      
-      chip.className = `chip ${grpClass} ${isSelected ? 'selected' : ''}`;
-      if (isSelected) {
-        chip.style.border = "1.5px solid var(--text-main)";
-      }
-      chip.innerText = t.name;
-      
-      chip.onclick = () => {
-        if (isSelected) {
-          SELECTED_TAGS = SELECTED_TAGS.filter(id => id !== t.id);
-        } else {
-          SELECTED_TAGS.push(t.id);
-        }
-        renderComposerSelectedChips();
-        renderComposerTagSelector();
-      };
-      
-      chipsDiv.appendChild(chip);
-    });
+    chipsDiv.className = `tag-selector-chips ${isOpen ? "" : "collapsed"}`;
+    appendTagChips(chipsDiv, groupTags);
     
     grpDiv.appendChild(chipsDiv);
     container.appendChild(grpDiv);
   });
+}
+
+// 全画面選択では有効タグだけを固定5グループ別に一覧表示する。
+function renderFullscreenTagPicker() {
+  const container = document.getElementById("composer-tag-fullscreen-list");
+  container.innerHTML = "";
+  const activeTags = DB.tags.filter(t => !t.isArchived);
+  ["症状", "薬", "サプリ", "運動", "環境"].forEach(groupName => {
+    const groupTags = activeTags.filter(t => t.group === groupName);
+    if (groupTags.length === 0) return;
+    const group = document.createElement("div");
+    group.className = "tag-selector-group";
+    group.innerHTML = `<div class="tag-selector-group-title" style="cursor:default"><span>${groupName}</span><span>${groupTags.length}件</span></div>`;
+    const chips = document.createElement("div");
+    chips.className = "tag-selector-chips";
+    appendTagChips(chips, groupTags);
+    group.appendChild(chips);
+    container.appendChild(group);
+  });
+}
+
+// 選択操作後にComposer内と全画面の表示を同じ状態へ同期する。
+function renderAllComposerTagChoices() {
+  renderComposerSelectedChips();
+  renderComposerTagSelector();
+  renderFullscreenTagPicker();
+}
+
+// Composerを保持したまま全画面タグ選択を前面に開く。
+function openFullscreenTagPicker() {
+  renderFullscreenTagPicker();
+  document.getElementById("composer-tag-fullscreen-modal").classList.add("active");
+}
+
+// 選択内容を保持して全画面タグ選択だけを閉じる。
+function closeFullscreenTagPicker() {
+  document.getElementById("composer-tag-fullscreen-modal").classList.remove("active");
+  renderComposerTagSelector();
 }
 
 function openActionSheet(recordId) {
