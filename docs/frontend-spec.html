@@ -690,20 +690,21 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -150px;
+  bottom: 0;
   background: var(--bg-phone);
   border-top: 1px solid var(--border-phone-screen);
   border-radius: 20px 20px 0 0;
   padding: 16px;
   z-index: 51;
   box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.1);
-  transition: bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .action-sheet.active {
-  bottom: 0;
+  transform: translateY(0);
 }
 .action-sheet-title {
   font-size: 11px;
@@ -1471,6 +1472,20 @@ body {
             <div class="action-sheet-title" id="action-sheet-title">記録の操作</div>
             <button class="action-sheet-btn" id="action-sheet-edit-btn">編集</button>
             <button class="action-sheet-btn danger" id="action-sheet-delete-btn">削除</button>
+          </div>
+
+          <!-- Record deletion confirmation -->
+          <div class="modal-overlay" id="track-delete-confirm-modal">
+            <div class="modal-card">
+              <div class="modal-title" style="color:#ef4444;">この記録を削除しますか？</div>
+              <div style="font-size:11px; line-height:1.5; color:var(--text-muted);">
+                記録に紐付くタグ情報も削除されます。この操作は戻せません。
+              </div>
+              <div class="modal-actions">
+                <button class="modal-btn cancel" id="track-delete-confirm-cancel">やめる</button>
+                <button class="modal-btn save" id="track-delete-confirm-submit" style="background:#ef4444;">削除実行</button>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -2307,7 +2322,9 @@ function setupEventListeners() {
 
   // Action sheet controls
   document.getElementById("action-sheet-edit-btn").onclick = editRecord;
-  document.getElementById("action-sheet-delete-btn").onclick = deleteRecord;
+  document.getElementById("action-sheet-delete-btn").onclick = openDeleteConfirmation;
+  document.getElementById("track-delete-confirm-cancel").onclick = closeAllOverlays;
+  document.getElementById("track-delete-confirm-submit").onclick = deleteRecord;
 
   // Calendar prev/next
   document.getElementById("cal-prev-btn").onclick = () => adjustMonth(-1);
@@ -2460,6 +2477,7 @@ function toggleComposerTags() {
 function closeAllOverlays() {
   resetComposerState();
   document.getElementById("track-action-sheet").classList.remove("active");
+  document.getElementById("track-delete-confirm-modal").classList.remove("active");
   document.getElementById("tags-modal").classList.remove("active");
   document.getElementById("settings-confirm-modal").classList.remove("active");
   document.getElementById("scrim").classList.remove("active");
@@ -2543,20 +2561,25 @@ function renderTrackTimeline() {
     const tlItem = document.createElement("div");
     tlItem.className = "tl-item";
     
-    // Double click or long press to trigger bottom sheet
+    // Pointer Eventsでマウス・タッチ共通の長押しを扱う。
     let pressTimer;
-    tlItem.onmousedown = () => {
+    const cancelLongPress = () => {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+    tlItem.onpointerdown = event => {
+      if (event.button !== 0) return;
+      cancelLongPress();
       pressTimer = window.setTimeout(() => {
+        pressTimer = null;
         openActionSheet(rec.id);
       }, 500);
     };
-    tlItem.onmouseup = () => clearTimeout(pressTimer);
-    tlItem.onclick = () => {
-      // Normal click
-    };
-    
-    // Add double click as backup
-    tlItem.ondblclick = () => openActionSheet(rec.id);
+    tlItem.onpointerup = cancelLongPress;
+    tlItem.onpointercancel = cancelLongPress;
+    tlItem.onpointerleave = cancelLongPress;
 
     const timeStr = rec.timestamp.toTimeString().substring(0, 5);
     const scoreUi = dbToUiScore(rec.value);
@@ -2723,6 +2746,14 @@ function deleteRecord() {
   
   closeAllOverlays();
   renderApp();
+}
+
+// 削除対象を保持したまま、即時削除せず確認モーダルへ遷移する。
+function openDeleteConfirmation() {
+  if (!EDITING_RECORD_ID) return;
+  document.getElementById("track-action-sheet").classList.remove("active");
+  document.getElementById("track-delete-confirm-modal").classList.add("active");
+  document.getElementById("scrim").classList.add("active");
 }
 
 function saveComposerRecord() {
