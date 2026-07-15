@@ -1182,6 +1182,15 @@ body {
   outline: none;
   font-family: inherit;
 }
+.modal-error {
+  display: none;
+  color: #ef4444;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.modal-error.active {
+  display: block;
+}
 .modal-select {
   border: 1px solid var(--border-phone-screen);
   background: var(--bg-phone-screen);
@@ -1679,6 +1688,7 @@ body {
             <div class="modal-card">
               <div class="modal-title" id="tags-modal-title">新しいタグ</div>
               <input type="text" class="modal-input" id="tags-modal-name" placeholder="タグの名称 (例: 頭痛、散歩)" />
+              <div class="modal-error" id="tags-modal-error" role="alert"></div>
               <select class="modal-select" id="tags-modal-group">
                 <option value="症状">症状 (目的変数 y)</option>
                 <option value="薬">薬 (説明変数 x)</option>
@@ -2416,6 +2426,7 @@ function setupEventListeners() {
   document.getElementById("tags-add-btn").onclick = openTagAddModal;
   document.getElementById("tags-modal-cancel").onclick = closeTagModal;
   document.getElementById("tags-modal-save").onclick = saveTag;
+  document.getElementById("tags-modal-name").oninput = clearTagFormError;
   document.getElementById("tags-modal-archive").onclick = () => archiveTag(true);
   document.getElementById("tags-modal-unarchive").onclick = () => archiveTag(false);
 
@@ -2682,7 +2693,7 @@ function renderTrackTimeline() {
       if (t.group === "薬") groupClass = "action";
       if (t.group === "サプリ") groupClass = "action";
       if (t.group === "環境") groupClass = "factor";
-      tagChips += `<span class="chip ${groupClass}">${t.name}</span>`;
+      tagChips += `<span class="chip ${groupClass}">${escapeHtml(t.name)}</span>`;
     });
 
     tlItem.innerHTML = `
@@ -2692,7 +2703,7 @@ function renderTrackTimeline() {
           <span class="score-badge s${scoreUi}">${scoreUi}</span>
           <span class="tl-label">${label}</span>
         </div>
-        ${rec.comment ? `<div class="tl-comment">${rec.comment}</div>` : ""}
+        ${rec.comment ? `<div class="tl-comment">${escapeHtml(rec.comment)}</div>` : ""}
         ${tagChips ? `<div class="tl-tags">${tagChips}</div>` : ""}
       </div>
     `;
@@ -3497,9 +3508,9 @@ function renderCorrelationList() {
     
     item.innerHTML = `
       <div class="assoc-tags">
-        <span class="chip action">${r.act.name}</span>
+        <span class="chip action">${escapeHtml(r.act.name)}</span>
         <span class="assoc-tag-arrow">➔</span>
-        <span class="chip symptom">${r.sym.name}</span>
+        <span class="chip symptom">${escapeHtml(r.sym.name)}</span>
       </div>
       <div class="assoc-metrics">
         <div class="assoc-lift ${isNeg ? 'negative' : ''}">
@@ -3529,9 +3540,9 @@ function renderCorrelationList() {
       item.style.opacity = "0.5";
       item.innerHTML = `
         <div class="assoc-tags">
-          <span class="chip default">${r.act.name}</span>
+          <span class="chip default">${escapeHtml(r.act.name)}</span>
           <span class="assoc-tag-arrow">➔</span>
-          <span class="chip default">${r.sym.name}</span>
+          <span class="chip default">${escapeHtml(r.sym.name)}</span>
         </div>
         <div class="assoc-metrics">
           <span style="font-size:10px; color:var(--text-muted);">データ不足</span>
@@ -3583,6 +3594,7 @@ function renderTagsScreen() {
 
 function openTagAddModal() {
   SELECTED_TAG_EDIT_ID = null;
+  clearTagFormError();
   document.getElementById("tags-modal-title").innerText = "新しいタグ";
   document.getElementById("tags-modal-name").value = "";
   document.getElementById("tags-modal-group").value = "症状";
@@ -3599,6 +3611,7 @@ function openTagEditModal(tagId) {
   if (!tag) return;
 
   SELECTED_TAG_EDIT_ID = tagId;
+  clearTagFormError();
   document.getElementById("tags-modal-title").innerText = "タグを編集";
   document.getElementById("tags-modal-name").value = tag.name;
   document.getElementById("tags-modal-group").value = tag.group;
@@ -3620,11 +3633,39 @@ function closeTagModal() {
   document.getElementById("scrim").classList.remove("active");
 }
 
+// タグフォームの検証理由を表示し、モーダルを開いたまま修正を促す。
+function showTagFormError(message) {
+  const error = document.getElementById("tags-modal-error");
+  error.innerText = message;
+  error.classList.add("active");
+}
+
+// 入力開始時とモーダル再表示時に過去の検証理由を消去する。
+function clearTagFormError() {
+  const error = document.getElementById("tags-modal-error");
+  error.innerText = "";
+  error.classList.remove("active");
+}
+
+// DBのUNIQUE制約と同じく、自分自身を除く完全一致の同名タグを拒否する。
 function saveTag() {
   const name = document.getElementById("tags-modal-name").value.trim();
   const group = document.getElementById("tags-modal-group").value;
-  
-  if (!name) return;
+  const allowedGroups = ["症状", "薬", "サプリ", "運動", "環境"];
+
+  if (!name) {
+    showTagFormError("タグ名を入力してください。");
+    return;
+  }
+  if (!allowedGroups.includes(group)) {
+    showTagFormError("タググループは固定5種類から選択してください。");
+    return;
+  }
+  const duplicate = DB.tags.some(t => t.id !== SELECTED_TAG_EDIT_ID && t.name === name);
+  if (duplicate) {
+    showTagFormError(`「${name}」は既に登録されています。別の名前を入力してください。`);
+    return;
+  }
 
   if (SELECTED_TAG_EDIT_ID) {
     const tag = DB.tags.find(t => t.id === SELECTED_TAG_EDIT_ID);
@@ -3684,6 +3725,13 @@ function isToday(d) {
 function formatDateJP(d) {
   const weekDays = ["日曜", "月曜", "火曜", "水曜", "木曜", "金曜", "土曜"];
   return `${d.getMonth() + 1}月${d.getDate()}日 ${weekDays[d.getDay()]}`;
+}
+
+// ユーザー入力をHTMLへ埋め込む場合に特殊文字を無害な文字参照へ変換する。
+function escapeHtml(value) {
+  const span = document.createElement("span");
+  span.innerText = String(value);
+  return span.innerHTML;
 }
 
 // --- INIT LAUNCH ---
