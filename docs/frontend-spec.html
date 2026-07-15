@@ -262,6 +262,11 @@ body {
   font-size: 11px;
   color: var(--text-muted);
 }
+.header-action-spacer {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
 
 .icon-btn {
   width: 32px;
@@ -475,6 +480,7 @@ body {
 }
 
 .composer-bar {
+  width: 100%;
   background: var(--bg-phone);
   border: 1px solid var(--border-phone-screen);
   border-radius: 20px;
@@ -483,17 +489,18 @@ body {
   align-items: center;
   gap: 6px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  color: var(--text-main);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 .composer-bar-plus {
-  border: 0;
-  background: transparent;
   color: var(--text-main);
   font-size: 24px;
   width: 28px;
   height: 28px;
   display: grid;
   place-items: center;
-  cursor: pointer;
 }
 .composer-bar-input {
   flex: 1;
@@ -505,13 +512,11 @@ body {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 0;
   background: var(--border-color);
   color: var(--bg-phone);
   font-weight: 900;
   display: grid;
   place-items: center;
-  cursor: pointer;
 }
 .composer-bar-send.active {
   background: #3b82f6;
@@ -631,10 +636,12 @@ body {
 }
 .composer-selected-tags .chip {
   cursor: pointer;
+  border: 0;
+  font-family: inherit;
 }
-.composer-selected-tags .chip::after {
-  content: " ×";
-  opacity: 0.6;
+.composer-selected-tags .chip-remove {
+  margin-left: 4px;
+  opacity: 0.65;
 }
 
 .composer-tag-selector {
@@ -647,26 +654,85 @@ body {
 .composer-tag-selector.active {
   display: block;
 }
+.tag-selector-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tag-selector-toolbar-title {
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+.tag-selector-fullscreen-btn {
+  border: 1px solid var(--border-phone-screen);
+  background: var(--bg-phone);
+  color: var(--text-main);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 10px;
+  cursor: pointer;
+}
 .tag-selector-group {
   margin-bottom: 12px;
 }
 .tag-selector-group-title {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 0;
   font-size: 9px;
   font-weight: 800;
   color: var(--text-muted);
   margin-bottom: 6px;
   text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
 }
 .tag-selector-chips {
   display: flex;
   flex-wrap: wrap;
 }
+.tag-selector-chips.collapsed {
+  display: none;
+}
 .tag-selector-chips .chip {
   cursor: pointer;
   transition: opacity 0.2s;
+  border: 0;
+  font-family: inherit;
 }
 .tag-selector-chips .chip.disabled {
   opacity: 0.4;
+}
+
+.tag-picker-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 90;
+  display: none;
+  flex-direction: column;
+  background: var(--bg-phone-screen);
+  padding: 38px 16px 16px;
+}
+.tag-picker-overlay.active {
+  display: flex;
+}
+.tag-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.tag-picker-title {
+  font-size: 16px;
+  font-weight: 850;
+}
+.tag-picker-list {
+  overflow-y: auto;
 }
 
 .composer-panel-footer {
@@ -690,20 +756,21 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: -150px;
+  bottom: 0;
   background: var(--bg-phone);
   border-top: 1px solid var(--border-phone-screen);
   border-radius: 20px 20px 0 0;
   padding: 16px;
   z-index: 51;
   box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.1);
-  transition: bottom 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .action-sheet.active {
-  bottom: 0;
+  transform: translateY(0);
 }
 .action-sheet-title {
   font-size: 11px;
@@ -1379,7 +1446,7 @@ body {
             <div class="app-title" id="app-header-title">Today</div>
             <div class="app-subtitle" id="app-header-subtitle">7月11日 土曜</div>
           </div>
-          <button class="icon-btn" id="header-action-btn" style="font-size: 16px;">🔍</button>
+          <span class="header-action-spacer" aria-hidden="true"></span>
         </header>
 
         <!-- Drawer Navigation -->
@@ -1415,11 +1482,11 @@ body {
 
           <!-- Bottom bar composer -->
           <div class="composer-wrap">
-            <div class="composer-bar" id="composer-trigger-btn">
-              <button class="composer-bar-plus">+</button>
-              <div class="composer-bar-input">体調やタグを記録...</div>
-              <button class="composer-bar-send">↑</button>
-            </div>
+            <button class="composer-bar" id="composer-trigger-btn" type="button" aria-label="記録Composerを開く">
+              <span class="composer-bar-plus" aria-hidden="true">+</span>
+              <span class="composer-bar-input">体調やタグを記録...</span>
+              <span class="composer-bar-send" aria-hidden="true">↑</span>
+            </button>
           </div>
 
           <!-- sliding sheet panel -->
@@ -1471,6 +1538,29 @@ body {
             <div class="action-sheet-title" id="action-sheet-title">記録の操作</div>
             <button class="action-sheet-btn" id="action-sheet-edit-btn">編集</button>
             <button class="action-sheet-btn danger" id="action-sheet-delete-btn">削除</button>
+          </div>
+
+          <!-- Record deletion confirmation -->
+          <div class="modal-overlay" id="track-delete-confirm-modal">
+            <div class="modal-card">
+              <div class="modal-title" style="color:#ef4444;">この記録を削除しますか？</div>
+              <div style="font-size:11px; line-height:1.5; color:var(--text-muted);">
+                記録に紐付くタグ情報も削除されます。この操作は戻せません。
+              </div>
+              <div class="modal-actions">
+                <button class="modal-btn cancel" id="track-delete-confirm-cancel">やめる</button>
+                <button class="modal-btn save" id="track-delete-confirm-submit" style="background:#ef4444;">削除実行</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Composerから開く全画面タグ選択 -->
+          <div class="tag-picker-overlay" id="composer-tag-fullscreen-modal">
+            <div class="tag-picker-header">
+              <div class="tag-picker-title">タグを選択</div>
+              <button class="tag-selector-fullscreen-btn" id="composer-tag-fullscreen-close" type="button">完了</button>
+            </div>
+            <div class="tag-picker-list" id="composer-tag-fullscreen-list"></div>
           </div>
 
         </div>
@@ -1940,12 +2030,21 @@ let DB = {
   record_tags: []
 };
 
+// デモデータの「現在」を一か所に固定し、画面間で同じ時計を参照する。
+const DEMO_CLOCK_ORIGIN = new Date("2026-07-11T13:00:00");
+const DEMO_CLOCK_STARTED_AT = Date.now();
+
+// モックを開いてからの経過時間だけ進む、注入可能なアプリ時刻を返す。
+function getAppNow() {
+  return new Date(DEMO_CLOCK_ORIGIN.getTime() + (Date.now() - DEMO_CLOCK_STARTED_AT));
+}
+
 // Seed records for the past 30 days (July 2026 Focus)
 function seedDatabase() {
   DB.records = [];
   DB.record_tags = [];
   
-  const now = new Date("2026-07-11T13:00:00");
+  const now = new Date(DEMO_CLOCK_ORIGIN);
   
   // Tag map for easy access
   const getTagId = name => DB.tags.find(t => t.name === name).id;
@@ -2247,14 +2346,16 @@ function dbToUiScore(val) {
 // --- APPLICATION ENGINE ---
 
 let CURRENT_SCREEN = "track";
-let VIEW_DATE = new Date("2026-07-11"); // Active calendar & timeline date
+let VIEW_DATE = new Date(DEMO_CLOCK_ORIGIN); // Active calendar & timeline date
 let SELECTED_TAGS = []; // Composer state
 let EDITING_RECORD_ID = null; // Hold record ID when long pressed
+let OPEN_TAG_GROUP = null; // Composer内で展開中のタググループ
 
 function initApp() {
   seedDatabase();
   setupEventListeners();
-  renderApp();
+  // 初期表示も通常の画面切替経路を通し、ヘッダーと日付を同期する。
+  switchScreen(CURRENT_SCREEN);
 }
 
 function setupEventListeners() {
@@ -2278,6 +2379,7 @@ function setupEventListeners() {
   document.getElementById("composer-trigger-btn").onclick = openComposer;
   document.getElementById("scrim").onclick = closeAllOverlays;
   document.getElementById("composer-tag-toggle-btn").onclick = toggleComposerTags;
+  document.getElementById("composer-tag-fullscreen-close").onclick = closeFullscreenTagPicker;
   
   // Composer state selections
   document.querySelectorAll(".composer-status-pill").forEach(pill => {
@@ -2297,7 +2399,9 @@ function setupEventListeners() {
 
   // Action sheet controls
   document.getElementById("action-sheet-edit-btn").onclick = editRecord;
-  document.getElementById("action-sheet-delete-btn").onclick = deleteRecord;
+  document.getElementById("action-sheet-delete-btn").onclick = openDeleteConfirmation;
+  document.getElementById("track-delete-confirm-cancel").onclick = closeAllOverlays;
+  document.getElementById("track-delete-confirm-submit").onclick = deleteRecord;
 
   // Calendar prev/next
   document.getElementById("cal-prev-btn").onclick = () => adjustMonth(-1);
@@ -2348,16 +2452,19 @@ function switchScreen(screenId) {
   // Update headers
   const headerTitle = document.getElementById("app-header-title");
   const headerSubtitle = document.getElementById("app-header-subtitle");
+  const demoDateLabel = `デモ日 ${DEMO_CLOCK_ORIGIN.getFullYear()}/${DEMO_CLOCK_ORIGIN.getMonth() + 1}/${DEMO_CLOCK_ORIGIN.getDate()}`;
   
   if (screenId === "track") {
     headerTitle.innerText = isToday(VIEW_DATE) ? "Today" : formatDateJP(VIEW_DATE);
-    headerSubtitle.innerText = isToday(VIEW_DATE) ? formatDateJP(VIEW_DATE) + " 今日" : "過去日の閲覧";
+    headerSubtitle.innerText = isToday(VIEW_DATE)
+      ? `今日・${demoDateLabel}`
+      : `過去日の閲覧・${demoDateLabel}`;
   } else if (screenId === "calendar") {
     headerTitle.innerText = "Calendar";
-    headerSubtitle.innerText = "月次体調グラフと集計";
+    headerSubtitle.innerText = `月次集計・${demoDateLabel}`;
   } else if (screenId === "stats") {
     headerTitle.innerText = "Stats";
-    headerSubtitle.innerText = "体調の因果特定分析";
+    headerSubtitle.innerText = `因果分析・${demoDateLabel}`;
   } else if (screenId === "tags") {
     headerTitle.innerText = "Tags";
     headerSubtitle.innerText = "タグマスタ管理";
@@ -2409,6 +2516,7 @@ function toggleTheme() {
 
 // Open Composer Sheet overlay
 function openComposer() {
+  updateComposerTagAvailability();
   document.getElementById("composer-panel").classList.add("active");
   document.getElementById("scrim").classList.add("active");
   
@@ -2448,8 +2556,10 @@ function toggleComposerTags() {
 }
 
 function closeAllOverlays() {
-  document.getElementById("composer-panel").classList.remove("active");
+  resetComposerState();
   document.getElementById("track-action-sheet").classList.remove("active");
+  document.getElementById("track-delete-confirm-modal").classList.remove("active");
+  document.getElementById("composer-tag-fullscreen-modal").classList.remove("active");
   document.getElementById("tags-modal").classList.remove("active");
   document.getElementById("settings-confirm-modal").classList.remove("active");
   document.getElementById("scrim").classList.remove("active");
@@ -2457,9 +2567,37 @@ function closeAllOverlays() {
   EDITING_RECORD_ID = null;
 }
 
+// Composerを閉じた理由にかかわらず、新規入力の初期状態へ戻す。
+function resetComposerState() {
+  SELECTED_TAGS = [];
+  OPEN_TAG_GROUP = null;
+  document.getElementById("composer-comment").value = "";
+  document.querySelectorAll(".composer-status-pill").forEach(pill => {
+    pill.classList.toggle("selected", pill.getAttribute("data-score") === "0");
+  });
+
+  const selector = document.getElementById("composer-tag-selector");
+  selector.classList.remove("active");
+
+  const panel = document.getElementById("composer-panel");
+  panel.className = "plus-panel mini";
+
+  const toggleBtn = document.getElementById("composer-tag-toggle-btn");
+  toggleBtn.classList.remove("ghost");
+  toggleBtn.innerText = "タグを追加";
+
+  const sendBtn = document.querySelector(".composer-bar-send");
+  sendBtn.className = "composer-bar-send";
+  sendBtn.style.background = "";
+
+  renderComposerSelectedChips();
+  updateComposerTagAvailability();
+}
+
 // --- RENDERING CORE ---
 
 function renderApp() {
+  updateComposerTagAvailability();
   if (CURRENT_SCREEN === "track") {
     renderTrackTimeline();
   } else if (CURRENT_SCREEN === "calendar") {
@@ -2476,6 +2614,10 @@ function renderApp() {
 function renderTrackTimeline() {
   const container = document.getElementById("track-timeline");
   container.innerHTML = "";
+
+  // 過去日は閲覧専用とし、新規記録Composerを表示しない。
+  document.querySelector("#screen-track .composer-wrap").style.display =
+    isToday(VIEW_DATE) ? "" : "none";
 
   // Filter records for active date
   const dayStart = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), 0, 0, 0);
@@ -2504,20 +2646,25 @@ function renderTrackTimeline() {
     const tlItem = document.createElement("div");
     tlItem.className = "tl-item";
     
-    // Double click or long press to trigger bottom sheet
+    // Pointer Eventsでマウス・タッチ共通の長押しを扱う。
     let pressTimer;
-    tlItem.onmousedown = () => {
+    const cancelLongPress = () => {
+      if (pressTimer) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    };
+    tlItem.onpointerdown = event => {
+      if (event.button !== 0) return;
+      cancelLongPress();
       pressTimer = window.setTimeout(() => {
+        pressTimer = null;
         openActionSheet(rec.id);
       }, 500);
     };
-    tlItem.onmouseup = () => clearTimeout(pressTimer);
-    tlItem.onclick = () => {
-      // Normal click
-    };
-    
-    // Add double click as backup
-    tlItem.ondblclick = () => openActionSheet(rec.id);
+    tlItem.onpointerup = cancelLongPress;
+    tlItem.onpointercancel = cancelLongPress;
+    tlItem.onpointerleave = cancelLongPress;
 
     const timeStr = rec.timestamp.toTimeString().substring(0, 5);
     const scoreUi = dbToUiScore(rec.value);
@@ -2561,31 +2708,118 @@ function renderComposerSelectedChips() {
     const t = DB.tags.find(tag => tag.id === tId);
     if (!t) return;
     
-    const chip = document.createElement("span");
-    let grpClass = "default";
-    if (t.group === "症状") grpClass = "symptom";
-    if (t.group === "薬" || t.group === "サプリ") grpClass = "action";
-    if (t.group === "環境") grpClass = "factor";
-    
-    chip.className = `chip ${grpClass}`;
-    chip.innerText = t.name;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `chip ${getTagGroupClass(t)}`;
+    chip.setAttribute("aria-label", `${t.name}を選択解除`);
+    const name = document.createElement("span");
+    name.innerText = t.name;
+    const removeIcon = document.createElement("span");
+    removeIcon.className = "chip-remove";
+    removeIcon.setAttribute("aria-hidden", "true");
+    removeIcon.innerText = "×";
+    chip.append(name, removeIcon);
     chip.onclick = () => {
       SELECTED_TAGS = SELECTED_TAGS.filter(id => id !== tId);
-      renderComposerSelectedChips();
-      renderComposerTagSelector();
+      renderAllComposerTagChoices();
     };
     container.appendChild(chip);
   });
 }
 
+// 有効タグがない場合は、開いても空になるタグ追加導線を隠す。
+function updateComposerTagAvailability() {
+  const hasActiveTags = DB.tags.some(t => !t.isArchived);
+  const toggleBtn = document.getElementById("composer-tag-toggle-btn");
+  if (!toggleBtn) return;
+  toggleBtn.style.display = hasActiveTags ? "" : "none";
+  if (!hasActiveTags) {
+    document.getElementById("composer-tag-selector").classList.remove("active");
+  }
+}
+
+// record_tagsを記録日時の新しい順に辿り、重複なしの有効タグを最大8件返す。
+function getRecentActiveTags() {
+  const activeById = new Map(DB.tags.filter(t => !t.isArchived).map(t => [t.id, t]));
+  const recordById = new Map(DB.records.map(r => [r.id, r]));
+  const orderedLinks = DB.record_tags
+    .map(link => ({ link, record: recordById.get(link.record_id) }))
+    .filter(item => item.record && activeById.has(item.link.tag_id))
+    .sort((a, b) => b.record.timestamp - a.record.timestamp);
+  const recent = [];
+  const seen = new Set();
+  for (const { link } of orderedLinks) {
+    if (seen.has(link.tag_id)) continue;
+    seen.add(link.tag_id);
+    recent.push(activeById.get(link.tag_id));
+    if (recent.length === 8) break;
+  }
+  return recent;
+}
+
+// 固定グループをモックのタグ配色クラスへ対応付ける。
+function getTagGroupClass(tag) {
+  if (tag.group === "症状") return "symptom";
+  if (tag.group === "薬" || tag.group === "サプリ" || tag.group === "運動") return "action";
+  if (tag.group === "環境") return "factor";
+  return "default";
+}
+
+// 選択状態をaria属性と枠線の双方で示すタグ候補ボタンを生成する。
+function createTagChoiceChip(tag) {
+  const chip = document.createElement("button");
+  const isSelected = SELECTED_TAGS.includes(tag.id);
+  chip.type = "button";
+  chip.className = `chip ${getTagGroupClass(tag)} ${isSelected ? "selected" : ""}`;
+  chip.setAttribute("aria-pressed", String(isSelected));
+  chip.innerText = tag.name;
+  if (isSelected) chip.style.border = "1.5px solid var(--text-main)";
+  chip.onclick = () => {
+    SELECTED_TAGS = isSelected
+      ? SELECTED_TAGS.filter(id => id !== tag.id)
+      : [...SELECTED_TAGS, tag.id];
+    renderAllComposerTagChoices();
+  };
+  return chip;
+}
+
+// 指定されたタグ候補を共通形式でコンテナへ追加する。
+function appendTagChips(container, tags) {
+  tags.forEach(tag => container.appendChild(createTagChoiceChip(tag)));
+}
+
+// 最近使ったタグと固定5グループのアコーディオンをComposer内へ描画する。
 function renderComposerTagSelector() {
   const container = document.getElementById("composer-tag-selector");
   container.innerHTML = "";
-
-  // Group tags
   const activeTags = DB.tags.filter(t => !t.isArchived);
-  
-  // Show active tags grouped
+  if (activeTags.length === 0) return;
+
+  const toolbar = document.createElement("div");
+  toolbar.className = "tag-selector-toolbar";
+  toolbar.innerHTML = `<span class="tag-selector-toolbar-title">タグ候補</span>`;
+  const fullscreenBtn = document.createElement("button");
+  fullscreenBtn.type = "button";
+  fullscreenBtn.className = "tag-selector-fullscreen-btn";
+  fullscreenBtn.setAttribute("aria-label", "全画面でタグを選択");
+  fullscreenBtn.innerText = "⛶ 全て表示";
+  fullscreenBtn.onclick = openFullscreenTagPicker;
+  toolbar.appendChild(fullscreenBtn);
+  container.appendChild(toolbar);
+
+  const recentTags = getRecentActiveTags();
+  if (recentTags.length > 0) {
+    const recentGroup = document.createElement("div");
+    recentGroup.className = "tag-selector-group";
+    recentGroup.innerHTML = `<div class="tag-selector-group-title" style="cursor:default">最近使ったタグ <span>${recentTags.length}/8</span></div>`;
+    const recentChips = document.createElement("div");
+    recentChips.className = "tag-selector-chips";
+    appendTagChips(recentChips, recentTags);
+    recentGroup.appendChild(recentChips);
+    container.appendChild(recentGroup);
+  }
+
+  // 固定5グループは一度に一つだけ開くアコーディオンとして表示する。
   const groups = ["症状", "薬", "サプリ", "運動", "環境"];
   groups.forEach(groupName => {
     const groupTags = activeTags.filter(t => t.group === groupName);
@@ -2594,45 +2828,63 @@ function renderComposerTagSelector() {
     const grpDiv = document.createElement("div");
     grpDiv.className = "tag-selector-group";
     
-    const title = document.createElement("div");
+    const title = document.createElement("button");
+    title.type = "button";
     title.className = "tag-selector-group-title";
-    title.innerText = groupName;
+    const isOpen = OPEN_TAG_GROUP === groupName;
+    title.setAttribute("aria-expanded", String(isOpen));
+    title.innerHTML = `<span>${groupName} (${groupTags.length})</span><span aria-hidden="true">${isOpen ? "−" : "+"}</span>`;
+    title.onclick = () => {
+      OPEN_TAG_GROUP = isOpen ? null : groupName;
+      renderComposerTagSelector();
+    };
     grpDiv.appendChild(title);
     
     const chipsDiv = document.createElement("div");
-    chipsDiv.className = "tag-selector-chips";
-    
-    groupTags.forEach(t => {
-      const isSelected = SELECTED_TAGS.includes(t.id);
-      const chip = document.createElement("span");
-      
-      let grpClass = "default";
-      if (t.group === "症状") grpClass = "symptom";
-      if (t.group === "薬" || t.group === "サプリ") grpClass = "action";
-      if (t.group === "環境") grpClass = "factor";
-      
-      chip.className = `chip ${grpClass} ${isSelected ? 'selected' : ''}`;
-      if (isSelected) {
-        chip.style.border = "1.5px solid var(--text-main)";
-      }
-      chip.innerText = t.name;
-      
-      chip.onclick = () => {
-        if (isSelected) {
-          SELECTED_TAGS = SELECTED_TAGS.filter(id => id !== t.id);
-        } else {
-          SELECTED_TAGS.push(t.id);
-        }
-        renderComposerSelectedChips();
-        renderComposerTagSelector();
-      };
-      
-      chipsDiv.appendChild(chip);
-    });
+    chipsDiv.className = `tag-selector-chips ${isOpen ? "" : "collapsed"}`;
+    appendTagChips(chipsDiv, groupTags);
     
     grpDiv.appendChild(chipsDiv);
     container.appendChild(grpDiv);
   });
+}
+
+// 全画面選択では有効タグだけを固定5グループ別に一覧表示する。
+function renderFullscreenTagPicker() {
+  const container = document.getElementById("composer-tag-fullscreen-list");
+  container.innerHTML = "";
+  const activeTags = DB.tags.filter(t => !t.isArchived);
+  ["症状", "薬", "サプリ", "運動", "環境"].forEach(groupName => {
+    const groupTags = activeTags.filter(t => t.group === groupName);
+    if (groupTags.length === 0) return;
+    const group = document.createElement("div");
+    group.className = "tag-selector-group";
+    group.innerHTML = `<div class="tag-selector-group-title" style="cursor:default"><span>${groupName}</span><span>${groupTags.length}件</span></div>`;
+    const chips = document.createElement("div");
+    chips.className = "tag-selector-chips";
+    appendTagChips(chips, groupTags);
+    group.appendChild(chips);
+    container.appendChild(group);
+  });
+}
+
+// 選択操作後にComposer内と全画面の表示を同じ状態へ同期する。
+function renderAllComposerTagChoices() {
+  renderComposerSelectedChips();
+  renderComposerTagSelector();
+  renderFullscreenTagPicker();
+}
+
+// Composerを保持したまま全画面タグ選択を前面に開く。
+function openFullscreenTagPicker() {
+  renderFullscreenTagPicker();
+  document.getElementById("composer-tag-fullscreen-modal").classList.add("active");
+}
+
+// 選択内容を保持して全画面タグ選択だけを閉じる。
+function closeFullscreenTagPicker() {
+  document.getElementById("composer-tag-fullscreen-modal").classList.remove("active");
+  renderComposerTagSelector();
 }
 
 function openActionSheet(recordId) {
@@ -2686,6 +2938,14 @@ function deleteRecord() {
   renderApp();
 }
 
+// 削除対象を保持したまま、即時削除せず確認モーダルへ遷移する。
+function openDeleteConfirmation() {
+  if (!EDITING_RECORD_ID) return;
+  document.getElementById("track-action-sheet").classList.remove("active");
+  document.getElementById("track-delete-confirm-modal").classList.add("active");
+  document.getElementById("scrim").classList.add("active");
+}
+
 function saveComposerRecord() {
   const activePill = document.querySelector(".composer-status-pill.selected");
   const value = activePill ? parseInt(activePill.getAttribute("data-score")) : 0;
@@ -2697,7 +2957,8 @@ function saveComposerRecord() {
     if (rec) {
       rec.value = value;
       rec.comment = comment;
-      DB.record_tags = DB.record_tags.filter(rt => rt.record_id === EDITING_RECORD_ID);
+      // 編集対象の古い紐付けだけを除去し、他レコードのタグは保持する。
+      DB.record_tags = DB.record_tags.filter(rt => rt.record_id !== EDITING_RECORD_ID);
       SELECTED_TAGS.forEach(tId => {
         DB.record_tags.push({ record_id: EDITING_RECORD_ID, tag_id: tId, value: 1.0 });
       });
@@ -2705,8 +2966,8 @@ function saveComposerRecord() {
     }
   } else {
     // Create Mode
-    const nowReal = new Date();
-    const timestamp = new Date(VIEW_DATE.getFullYear(), VIEW_DATE.getMonth(), VIEW_DATE.getDate(), nowReal.getHours(), nowReal.getMinutes(), nowReal.getSeconds());
+    // 表示中の日付ではなく、常にアプリの現在日時で新規記録する。
+    const timestamp = getAppNow();
     
     const newId = `rec_${Date.now()}`;
     DB.records.push({
@@ -2723,12 +2984,6 @@ function saveComposerRecord() {
     logState(`Created new record with ID ${newId}`);
   }
 
-  // Clear states
-  SELECTED_TAGS = [];
-  document.getElementById("composer-comment").value = "";
-  document.querySelectorAll(".composer-status-pill").forEach(p => p.classList.remove("selected"));
-  document.querySelector('.composer-status-pill[data-score="0"]').classList.add("selected");
-  
   closeAllOverlays();
   renderApp();
 }
@@ -3015,7 +3270,7 @@ function render30DaysTrendChart() {
 
   if (DB.records.length === 0) return;
 
-  const now = new Date("2026-07-11");
+  const now = getAppNow();
   let points = [];
   
   for (let i = 29; i >= 0; i--) {
@@ -3420,7 +3675,7 @@ function clearAllDatabase() {
 // --- UTIL FORMATTERS ---
 
 function isToday(d) {
-  const today = new Date();
+  const today = getAppNow();
   return d.getDate() === today.getDate() &&
          d.getMonth() === today.getMonth() &&
          d.getFullYear() === today.getFullYear();
